@@ -9,6 +9,7 @@ import { Bed, BedDocument } from '../inpatient/schemas/bed.schema'
 import { InpatientOrder, InpatientOrderDocument } from '../inpatient/schemas/inpatient-order.schema'
 import { Dictionary, DictionaryDocument } from '../dictionaries/schemas/dictionary.schema'
 import { IdCounterService } from '../id-counter/id-counter.service'
+import { User, UserDocument } from '../users/schemas/user.schema'
 
 function daysAgo(days: number, hour = 10, minute = 0): Date {
   const d = new Date()
@@ -33,6 +34,7 @@ export class SeedService implements OnModuleInit {
     @InjectModel(InpatientOrder.name)
     private readonly orderModel: Model<InpatientOrderDocument>,
     @InjectModel(Dictionary.name) private readonly dictionaryModel: Model<DictionaryDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly idCounter: IdCounterService
   ) {}
 
@@ -54,6 +56,9 @@ export class SeedService implements OnModuleInit {
   }
 
   private async seed(): Promise<void> {
+    // 就诊记录归属真实医生账号（患者一览按医生过滤）
+    const doctorWang = await this.userModel.findOne({ username: 'D1027' }).exec()
+    const doctorId = doctorWang ? String(doctorWang._id) : 'doctor-d1027'
     // ---------- 患者 ----------
     const mk = (
       name: string,
@@ -99,7 +104,7 @@ export class SeedService implements OnModuleInit {
       empiId: zh.empiId,
       patientName: zh.name,
       type: 'followup',
-      doctorId: 'doctor-d1027',
+      doctorId,
       doctorName: '王医生',
       department: '呼吸内科',
       status: 'completed',
@@ -111,7 +116,7 @@ export class SeedService implements OnModuleInit {
       empiId: zh.empiId,
       patientName: zh.name,
       type: 'followup',
-      doctorId: 'doctor-d1027',
+      doctorId,
       doctorName: '王医生',
       department: '呼吸内科',
       status: 'completed',
@@ -130,7 +135,7 @@ export class SeedService implements OnModuleInit {
         empiId: wq.empiId,
         patientName: wq.name,
         type: 'followup',
-        doctorId: 'doctor-d1027',
+        doctorId,
         doctorName: '王医生',
         department: '心内科',
         status: 'completed',
@@ -138,7 +143,7 @@ export class SeedService implements OnModuleInit {
       })
     }
 
-    // ---------- 今日就诊 18 条（复诊 11 / 首诊 7） ----------
+    // ---------- 今日就诊 18 条（复诊 11 / 首诊 7，全部关联真实患者档案） ----------
     // 张丽华今日 08:52 建档首诊（对齐 UI 稿就诊旅程）
     const zhangToday = new Date()
     zhangToday.setHours(8, 52, 0, 0)
@@ -148,7 +153,7 @@ export class SeedService implements OnModuleInit {
       empiId: zh.empiId,
       patientName: zh.name,
       type: 'followup',
-      doctorId: 'doctor-d1027',
+      doctorId,
       doctorName: '王医生',
       department: '呼吸内科',
       chiefComplaint: '复诊',
@@ -156,8 +161,24 @@ export class SeedService implements OnModuleInit {
       visitedAt: zhangToday
     })
 
+    // 首诊患者：建立真实档案后再创建就诊（保证就诊与档案一一对应）
+    const firstNames = ['赵小敏', '钱慧', '孙国栋', '李婉', '周建国', '吴敏', '郑小红']
+    const firstPatients: PatientDocument[] = []
+    for (let i = 0; i < firstNames.length; i++) {
+      firstPatients.push(
+        await this.patientModel.create({
+          empiId: `P-${firstNames[i]}`,
+          name: firstNames[i],
+          gender: i % 2 === 0 ? '女' : '男',
+          birthDate: daysAgo(20 + i * 4, 0, 0),
+          phone: `1390000${String(1000 + i)}`,
+          address: '演示地址',
+          medicalRecordNo: `DA${dateStr()}${String(18 + i).padStart(4, '0')}`
+        })
+      )
+    }
+
     const followups = [wq, cj, ljj, wf, sl, lgh, zl, wgq, zxh, fjj]
-    const firstNames = ['赵小敏', '钱慧', '孙国栋', '李婉']
     let visitSeq = 1
     for (let i = 0; i < 17; i++) {
       const isFollowup = i < 10
@@ -167,18 +188,18 @@ export class SeedService implements OnModuleInit {
         patient = followups[i]
         name = patient.name
       } else {
-        patient = null
-        name = firstNames[(i - 10) % firstNames.length]
+        patient = firstPatients[i - 10]
+        name = patient.name
       }
       const d = new Date()
       d.setHours(9 + Math.floor(i / 2), (i % 2) * 30, 0, 0)
       await this.visitModel.create({
         visitNo: `MZ${d.toISOString().slice(0, 10).replace(/-/g, '')}${String(visitSeq++).padStart(4, '0')}`,
-        patientId: patient ? patient._id : new Types.ObjectId(),
-        empiId: patient ? patient.empiId : `P-F${name}`,
+        patientId: patient._id,
+        empiId: patient.empiId,
         patientName: name,
         type: isFollowup ? 'followup' : 'first',
-        doctorId: 'doctor-d1027',
+        doctorId,
         doctorName: '王医生',
         department: '呼吸内科',
         chiefComplaint: isFollowup ? '复诊' : '首诊',
