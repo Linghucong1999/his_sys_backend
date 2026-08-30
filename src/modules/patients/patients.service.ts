@@ -34,16 +34,25 @@ export class PatientsService {
   }
 
   async search(keyword: string, limit = 20): Promise<FlattenMaps<PatientDocument>[]> {
-    return this.patientModel
-      .find({
+    // 支持姓名 / 手机号 / 姓名+手机号组合（空格分隔，各片段 AND 匹配）
+    const tokens = keyword.trim().split(/\s+/).filter(Boolean)
+    let filter: Record<string, unknown>
+    if (tokens.length === 0) {
+      filter = {}
+    } else {
+      const conds = tokens.map((t) => ({
         $or: [
-          { name: { $regex: keyword, $options: 'i' } },
-          { empiId: keyword },
-          { idCardNo: keyword },
-          { medicalRecordNo: keyword },
-          { phone: keyword }
+          { name: { $regex: t, $options: 'i' } },
+          { phone: { $regex: t } },
+          { empiId: t },
+          { medicalRecordNo: t }
         ]
-      })
+      }))
+      filter = tokens.length > 1 ? { $and: conds } : conds[0]
+    }
+    return this.patientModel
+      .find(filter)
+      .sort({ createdAt: -1 })
       .limit(Math.min(limit, 50))
       .lean()
       .exec()
