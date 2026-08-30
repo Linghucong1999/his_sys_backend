@@ -1,99 +1,101 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# HIS 医生工作站 - 后端
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+医生工作站 + 电子病历 EMR + 基础数据的临床文书系统后端服务。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 技术栈
 
-## Description
+| 组件 | 选型 |
+|---|---|
+| 框架 | NestJS 10（TypeScript） |
+| ORM | Mongoose 8（@nestjs/mongoose） |
+| 数据库 | MongoDB 4.4（单节点副本集 `rs0`，127.0.0.1:27017） |
+| 认证 | JWT（@nestjs/jwt）+ bcryptjs |
+| 校验 | class-validator + class-transformer（全局 ValidationPipe） |
+| 接口文档 | Swagger（@nestjs/swagger） |
+| 配置 | @nestjs/config（.env） |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 目录结构
 
-## Project setup
-
-```bash
-$ npm install
+```
+src/
+├── main.ts                     # 入口：全局前缀 /api、ValidationPipe、Swagger、统一响应/异常
+├── app.module.ts               # 根模块：ConfigModule、MongooseModule、各业务模块装配
+├── app.controller.ts           # 健康检查 /api/health（公开）
+└── common/                     # 全局基建
+    ├── decorators/             # @Public() @Roles() @CurrentUser()
+    ├── filters/                # 统一异常响应 HttpExceptionFilter
+    ├── guards/                 # JwtAuthGuard（登录校验）、RolesGuard（角色校验）
+    └── interceptors/           # TransformInterceptor（统一响应）、AuditLogInterceptor（全站审计）
+└── modules/                    # 业务模块（11 个）
+    ├── auth/                   # 登录认证（JWT 签发）
+    ├── users/                  # 用户管理（种子管理员 admin/admin123）
+    ├── patients/               # 患者主索引 EMPI（建档/搜索/合并）
+    ├── audit-log/              # 操作审计日志（全站留痕，敏感字段脱敏）
+    ├── dictionaries/           # 基础字典管理（占位）
+    ├── rbac/                   # 角色权限管理（占位）
+    ├── outpatient/             # 门急诊医生工作站（占位）
+    ├── inpatient/              # 住院医生工作站（占位）
+    ├── emr/                    # 电子病历 EMR（占位）
+    ├── consultation/           # 会诊管理（占位）
+    └── ca/                     # 电子签名 CA（占位）
 ```
 
-## Compile and run the project
+## 快速开始
+
+### 前置条件
+
+- Node.js 18+
+- MongoDB 4.4+ 以副本集模式运行于 `127.0.0.1:27017`（副本集名 `rs0`）
+- 首次启动前复制环境变量文件：`cp .env.example .env` 并按需修改
+
+### 安装与运行
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
+npm run start:dev    # 开发模式（热重载）
+# 或
+npm run build && npm run start:prod
 ```
 
-## Run tests
+启动成功后：
 
-```bash
-# unit tests
-$ npm run test
+- 服务地址：`http://127.0.0.1:3000/api`
+- Swagger 文档：`http://127.0.0.1:3000/api/docs`
 
-# e2e tests
-$ npm run test:e2e
+## 环境变量（.env）
 
-# test coverage
-$ npm run test:cov
-```
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PORT` | `3000` | 服务端口 |
+| `MONGO_URI` | `mongodb://127.0.0.1:27017/his?replicaSet=rs0` | MongoDB 连接串 |
+| `JWT_SECRET` | - | JWT 签名密钥（生产环境必须更换） |
+| `JWT_EXPIRES_IN` | `8h` | Token 有效期 |
 
-## Deployment
+## API 约定
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- 统一前缀：`/api`
+- 统一响应结构：`{ code, data, message }`，`code = 0` 表示成功，异常时为 HTTP 状态码
+- 除标注 `@Public()` 的接口（如登录、健康检查）外，均需请求头 `Authorization: Bearer <token>`
+- 角色控制：接口可用 `@Roles('admin', 'doctor', ...)` 声明所需角色
+- 全站操作自动审计：登录、增删改查均写入 `auditlogs` 集合，请求体中的 `password`、`token`、`idCardNo` 等敏感字段自动脱敏
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 初始账号
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+首次启动自动创建种子管理员：`admin` / `admin123`（登录后请尽快修改）。
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+角色约定：`admin` 管理员 / `doctor` 医生 / `nurse` 护士 / `pharmacist` 药师 / `manager` 管理者。
 
-## Resources
+## 脚本命令
 
-Check out a few resources that may come in handy when working with NestJS:
+| 命令 | 说明 |
+|---|---|
+| `npm run start:dev` | 开发模式（热重载） |
+| `npm run build` | 编译到 dist/ |
+| `npm run start:prod` | 生产模式运行 |
+| `npm test` | 单元测试（jest） |
+| `npm run test:e2e` | e2e 测试 |
+| `npm run lint` | ESLint 检查并修复 |
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 提交规范
 
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+采用 Conventional Commits：`feat:` 新功能 / `fix:` 修复 / `docs:` 文档 / `chore:` 工程配置 / `test:` 测试 / `refactor:` 重构。
