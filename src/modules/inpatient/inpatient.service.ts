@@ -22,7 +22,12 @@ export class InpatientService {
 
   async listBeds(ward?: string): Promise<FlattenMaps<BedDocument>[]> {
     const filter: Record<string, unknown> = ward ? { ward } : {}
-    return this.bedModel.find(filter).sort({ bedNo: 1 }).lean().exec()
+    return this.bedModel
+      .find(filter)
+      .sort({ bedNo: 1 })
+      .populate('patientId', 'name gender birthDate')
+      .lean()
+      .exec()
   }
 
   async listOrders(query: { patientId?: string; bedNo?: string }): Promise<FlattenMaps<InpatientOrderDocument>[]> {
