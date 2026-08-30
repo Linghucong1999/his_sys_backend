@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common'
+import { InjectModel } from '@nestjs/mongoose'
+import { FlattenMaps, Model } from 'mongoose'
+import { Dictionary, DictionaryDocument } from './schemas/dictionary.schema'
 
 @Injectable()
 export class DictionariesService {
-  /** 占位服务：待 UI 设计稿与业务设计后填充 */
-  info(): { module: string; status: string } {
-    return { module: '基础字典管理', status: 'placeholder' }
+  constructor(@InjectModel(Dictionary.name) private readonly dictionaryModel: Model<DictionaryDocument>) {}
+
+  async listByCategory(category: string, keyword?: string): Promise<FlattenMaps<DictionaryDocument>[]> {
+    const filter: Record<string, unknown> = { category }
+    if (keyword) {
+      filter.name = { $regex: keyword, $options: 'i' }
+    }
+    return this.dictionaryModel.find(filter).limit(50).lean().exec()
   }
 }

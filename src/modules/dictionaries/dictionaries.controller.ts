@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common'
+import { Controller, Get, Param, Query } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { DictionariesService } from './dictionaries.service'
 
@@ -8,9 +8,8 @@ import { DictionariesService } from './dictionaries.service'
 export class DictionariesController {
   constructor(private readonly dictionariesService: DictionariesService) {}
 
-  /** 模块存活探针（占位） */
-  @Get('ping')
-  ping() {
-    return this.dictionariesService.info()
+  @Get(':category')
+  list(@Param('category') category: string, @Query('keyword') keyword?: string) {
+    return this.dictionariesService.listByCategory(category, keyword)
   }
 }

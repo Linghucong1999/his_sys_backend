@@ -1,6 +1,58 @@
-import { Controller, Get } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
+import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator'
 import { EmrService } from './emr.service'
+import { CurrentUser } from '../../common/decorators/current-user.decorator'
+import type { JwtUserPayload } from '../../common/guards/jwt-auth.guard'
+
+class SaveRecordDto {
+  @IsString()
+  @IsNotEmpty()
+  patientId: string
+
+  @IsString()
+  @IsNotEmpty()
+  patientName: string
+
+  @IsIn(['outpatient', 'admission', 'prescription'])
+  type: 'outpatient' | 'admission' | 'prescription'
+
+  @IsOptional()
+  @IsString()
+  department?: string
+
+  @IsOptional()
+  @IsString()
+  visitId?: string
+
+  @IsOptional()
+  @IsString()
+  chiefComplaint?: string
+
+  @IsOptional()
+  @IsString()
+  presentIllness?: string
+
+  @IsOptional()
+  @IsString()
+  pastHistory?: string
+
+  @IsOptional()
+  @IsString()
+  physicalExam?: string
+
+  @IsOptional()
+  @IsArray()
+  diagnosis?: Array<{ code: string; name: string }>
+
+  @IsOptional()
+  @IsString()
+  prescriptionSummary?: string
+
+  @IsOptional()
+  @IsString()
+  visitedAt?: string
+}
 
 @ApiTags('emr')
 @ApiBearerAuth()
@@ -8,9 +60,29 @@ import { EmrService } from './emr.service'
 export class EmrController {
   constructor(private readonly emrService: EmrService) {}
 
-  /** 模块存活探针（占位） */
-  @Get('ping')
-  ping() {
-    return this.emrService.info()
+  @Get('records')
+  list(@Query('keyword') keyword?: string, @Query('signed') signed?: string, @Query('type') type?: string) {
+    return this.emrService.list({ keyword, signed, type })
+  }
+
+  @Get('records/:id')
+  findOne(@Param('id') id: string) {
+    return this.emrService.findById(id)
+  }
+
+  @Post('records')
+  save(@Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
+    return this.emrService.save(dto, user.username)
+  }
+
+  @Put('records/:id')
+  update(@Param('id') id: string, @Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
+    return this.emrService.save(dto, user.username, id)
+  }
+
+  /** CA 签名 */
+  @Post('records/:id/sign')
+  sign(@Param('id') id: string, @CurrentUser() user: JwtUserPayload) {
+    return this.emrService.sign(id, { userId: user.userId, username: user.username })
   }
 }
