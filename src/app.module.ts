@@ -14,6 +14,9 @@ import { InpatientModule } from './modules/inpatient/inpatient.module'
 import { EmrModule } from './modules/emr/emr.module'
 import { ConsultationModule } from './modules/consultation/consultation.module'
 import { CaModule } from './modules/ca/ca.module'
+import { DashboardModule } from './modules/dashboard/dashboard.module'
+import { SearchModule } from './modules/search/search.module'
+import { SeedModule } from './modules/seed/seed.module'
 
 @Module({
   imports: [
@@ -37,7 +40,10 @@ import { CaModule } from './modules/ca/ca.module'
     InpatientModule,
     EmrModule,
     ConsultationModule,
-    CaModule
+    CaModule,
+    DashboardModule,
+    SearchModule,
+    SeedModule
   ],
   controllers: [AppController],
   providers: [AppService]
