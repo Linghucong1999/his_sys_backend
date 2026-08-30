@@ -30,7 +30,7 @@ export class Patient {
   address?: string
 
   /** 病历号：院内使用的就诊档案号 */
-  @Prop({ index: true })
+  @Prop({ index: true, unique: true, sparse: true })
   medicalRecordNo?: string
 
   @Prop({ default: 'active', enum: ['active', 'merged', 'inactive'] })

@@ -8,6 +8,7 @@ import { Consultation, ConsultationSchema } from '../consultation/schemas/consul
 import { Bed, BedSchema } from '../inpatient/schemas/bed.schema'
 import { InpatientOrder, InpatientOrderSchema } from '../inpatient/schemas/inpatient-order.schema'
 import { Dictionary, DictionarySchema } from '../dictionaries/schemas/dictionary.schema'
+import { IdCounterModule } from '../id-counter/id-counter.module'
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { Dictionary, DictionarySchema } from '../dictionaries/schemas/dictionary
       { name: Bed.name, schema: BedSchema },
       { name: InpatientOrder.name, schema: InpatientOrderSchema },
       { name: Dictionary.name, schema: DictionarySchema }
-    ])
+    ]),
+    IdCounterModule
   ],
   providers: [SeedService]
 })

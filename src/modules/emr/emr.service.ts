@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { FlattenMaps, Model, Types } from 'mongoose'
 import { MedicalRecord, MedicalRecordDocument } from './schemas/medical-record.schema'
+import { IdCounterService } from '../id-counter/id-counter.service'
 
 export interface SaveRecordInput {
   patientId: string
@@ -20,13 +21,10 @@ export interface SaveRecordInput {
 
 @Injectable()
 export class EmrService {
-  constructor(@InjectModel(MedicalRecord.name) private readonly recordModel: Model<MedicalRecordDocument>) {}
-
-  private async genRecordNo(): Promise<string> {
-    const now = new Date()
-    const seq = (await this.recordModel.countDocuments()) + 1
-    return `MZ${now.toISOString().slice(0, 10).replace(/-/g, '')}${String(seq).padStart(4, '0')}`
-  }
+  constructor(
+    @InjectModel(MedicalRecord.name) private readonly recordModel: Model<MedicalRecordDocument>,
+    private readonly idCounter: IdCounterService
+  ) {}
 
   async list(query: {
     keyword?: string
@@ -59,7 +57,7 @@ export class EmrService {
     }
     return this.recordModel.create({
       ...input,
-      recordNo: await this.genRecordNo(),
+      recordNo: await this.idCounter.nextRecordNo(),
       doctorName,
       patientId: new Types.ObjectId(input.patientId),
       visitId: input.visitId ? new Types.ObjectId(input.visitId) : undefined,

@@ -8,6 +8,7 @@ import { Consultation, ConsultationDocument } from '../consultation/schemas/cons
 import { Bed, BedDocument } from '../inpatient/schemas/bed.schema'
 import { InpatientOrder, InpatientOrderDocument } from '../inpatient/schemas/inpatient-order.schema'
 import { Dictionary, DictionaryDocument } from '../dictionaries/schemas/dictionary.schema'
+import { IdCounterService } from '../id-counter/id-counter.service'
 
 function daysAgo(days: number, hour = 10, minute = 0): Date {
   const d = new Date()
@@ -31,7 +32,8 @@ export class SeedService implements OnModuleInit {
     @InjectModel(Bed.name) private readonly bedModel: Model<BedDocument>,
     @InjectModel(InpatientOrder.name)
     private readonly orderModel: Model<InpatientOrderDocument>,
-    @InjectModel(Dictionary.name) private readonly dictionaryModel: Model<DictionaryDocument>
+    @InjectModel(Dictionary.name) private readonly dictionaryModel: Model<DictionaryDocument>,
+    private readonly idCounter: IdCounterService
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -41,6 +43,13 @@ export class SeedService implements OnModuleInit {
       return
     }
     await this.seed()
+    // 同步编号计数器：抬升到种子最大序号之后，避免新建档与演示编号冲突
+    const d = new Date()
+    const p = (n: number): string => String(n).padStart(2, '0')
+    const day = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
+    await this.idCounter.bump(`mrn:${day}`, 30)
+    await this.idCounter.bump(`record:${day}`, 40)
+    await this.idCounter.bump('empi', 1)
     this.logger.log('演示数据种子完成（患者/就诊/病历/会诊/床位/医嘱/字典）')
   }
 
