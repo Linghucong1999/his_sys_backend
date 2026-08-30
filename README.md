@@ -26,18 +26,21 @@ src/
     ├── filters/                # 统一异常响应 HttpExceptionFilter
     ├── guards/                 # JwtAuthGuard（登录校验）、RolesGuard（角色校验）
     └── interceptors/           # TransformInterceptor（统一响应）、AuditLogInterceptor（全站审计）
-└── modules/                    # 业务模块（11 个）
+└── modules/                    # 业务模块（14 个）
     ├── auth/                   # 登录认证（JWT 签发）
-    ├── users/                  # 用户管理（种子管理员 admin/admin123）
+    ├── users/                  # 用户管理（种子账号见下）
     ├── patients/               # 患者主索引 EMPI（建档/搜索/合并）
+    ├── outpatient/             # 门急诊就诊：医师直接接诊（无挂号）、今日就诊
+    ├── emr/                    # 电子病历：病历/处方列表、保存、CA 签名
+    ├── consultation/           # 会诊管理：发起/响应/催办
+    ├── inpatient/              # 住院工作站：床位一览、长期/临时医嘱、停嘱
+    ├── dictionaries/           # 基础字典：ICD-10/科室/药品目录
+    ├── dashboard/              # 工作台聚合：统计摘要、待办聚合
+    ├── search/                 # Cmd+K 聚合搜索：患者/病历/药品/命令
     ├── audit-log/              # 操作审计日志（全站留痕，敏感字段脱敏）
-    ├── dictionaries/           # 基础字典管理（占位）
+    ├── seed/                   # 演示数据种子（患者/就诊/病历/会诊/床位/医嘱/字典）
     ├── rbac/                   # 角色权限管理（占位）
-    ├── outpatient/             # 门急诊医生工作站（占位）
-    ├── inpatient/              # 住院医生工作站（占位）
-    ├── emr/                    # 电子病历 EMR（占位）
-    ├── consultation/           # 会诊管理（占位）
-    └── ca/                     # 电子签名 CA（占位）
+    └── ca/                     # 电子签名 CA（占位，签名暂由 emr 模块模拟实现）
 ```
 
 ## 快速开始
@@ -81,9 +84,35 @@ npm run build && npm run start:prod
 
 ## 初始账号
 
-首次启动自动创建种子管理员：`admin` / `admin123`（登录后请尽快修改）。
+首次启动自动创建种子账号（密码除注明外统一 `123456`）：
+
+| 工号 | 姓名 | 角色 | 密码 |
+|---|---|---|---|
+| `D1027` | 王医生 | doctor 医生 | `123456` |
+| `N1001` | 李护士 | nurse 护士 | `123456` |
+| `P2001` | 张药师 | pharmacist 药师 | `123456` |
+| `admin` | 系统管理员 | admin 管理员 | `admin123` |
 
 角色约定：`admin` 管理员 / `doctor` 医生 / `nurse` 护士 / `pharmacist` 药师 / `manager` 管理者。
+
+首次启动还会注入 UI 稿对应的演示数据（8 患者 / 18 今日就诊 / 7 病历 / 3 会诊 / 8 床位 / 4 医嘱 / 20 字典），删除 `his` 库中业务集合后重启可重新生成。
+
+## 主要接口
+
+| 接口 | 说明 |
+|---|---|
+| `POST /api/auth/login` | 登录（公开），返回 JWT |
+| `GET /api/dashboard/summary` | 工作台统计（今日接诊/复诊/待签名/待会诊） |
+| `GET /api/dashboard/todos` | 待办聚合（待签名文书/待响应会诊/报告回传） |
+| `POST /api/outpatient/visits` | 医师直接接诊（新建首诊/复诊调档） |
+| `GET /api/emr/records` | 病历列表（keyword/signed/type 过滤） |
+| `POST /api/emr/records/:id/sign` | CA 签名（模拟） |
+| `GET/POST /api/consultations` | 会诊列表/发起 |
+| `POST /api/consultations/:id/respond` | 响应会诊 |
+| `GET /api/inpatient/beds` `GET /api/inpatient/orders` | 床位/医嘱 |
+| `GET /api/dictionaries/:category` | ICD-10/科室/药品字典 |
+| `GET /api/search?q=` | Cmd+K 聚合搜索 |
+| `GET /api/audit-logs` | 审计日志（仅 admin） |
 
 ## 脚本命令
 
