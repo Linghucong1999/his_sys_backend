@@ -46,7 +46,13 @@ export class SeedService implements OnModuleInit {
 
   private async seed(): Promise<void> {
     // ---------- 患者 ----------
-    const mk = (name: string, gender: string, age: number, phone: string): Promise<PatientDocument> =>
+    const mk = (
+      name: string,
+      gender: string,
+      age: number,
+      phone: string,
+      recordNo: string
+    ): Promise<PatientDocument> =>
       this.patientModel.create({
         empiId: `P-${name}`,
         name,
@@ -54,37 +60,109 @@ export class SeedService implements OnModuleInit {
         birthDate: daysAgo(age * 365, 0, 0),
         phone,
         address: '演示地址',
-        medicalRecordNo: `DA${Date.now()}${Math.floor(Math.random() * 100)}`
+        medicalRecordNo: recordNo
       })
 
-    const zh = await mk('张丽华', '女', 45, '13800002671')
-    const wq = await mk('王强', '男', 62, '13900005521')
-    const cj = await mk('陈静', '女', 47, '13700001122')
-    const ljj = await mk('刘建军', '男', 58, '13600003344')
-    const zm = await mk('周明', '男', 66, '13500005566')
-    const wf = await mk('吴芳', '女', 39, '13400007788')
-    const zh2 = await mk('郑海', '男', 52, '13300009900')
-    const sl = await mk('孙丽', '女', 61, '13200001010')
+    const d = new Date()
+    const dateStr = (): string => d.toISOString().slice(0, 10).replace(/-/g, '')
+    const zh = await mk('张丽华', '女', 45, '13800002671', `DA${dateStr()}012`)
+    const wq = await mk('王强', '男', 62, '13900005521', `DA${dateStr()}007`)
+    const cj = await mk('陈静', '女', 47, '13700001122', `DA${dateStr()}003`)
+    const ljj = await mk('刘建军', '男', 58, '13600003344', 'DA20260828003')
+    const zm = await mk('周明', '男', 66, '13500005566', `DA${dateStr()}008`)
+    const wf = await mk('吴芳', '女', 39, '13400007788', `DA${dateStr()}009`)
+    const zh2 = await mk('郑海', '男', 52, '13300009900', `DA${dateStr()}010`)
+    const sl = await mk('孙丽', '女', 61, '13200001010', `DA${dateStr()}011`)
+    // 额外复诊患者（补齐今日复诊 11 条，每人仅 1 次）
+    const lgh = await mk('李国华', '男', 71, '13100002020', `DA${dateStr()}013`)
+    const zl = await mk('周丽', '女', 35, '13000003030', `DA${dateStr()}014`)
+    const wgq = await mk('吴国强', '男', 48, '12900004040', `DA${dateStr()}015`)
+    const zxh = await mk('郑晓红', '女', 29, '12800005050', `DA${dateStr()}016`)
+    const fjj = await mk('冯建军', '男', 55, '12700006060', `DA${dateStr()}017`)
 
     const patients = [zh, wq, cj, ljj, zm, wf, zh2, sl]
 
+    // ---------- 历史就诊（对齐 UI 稿「复诊调档」次数） ----------
+    // 张丽华：3 次就诊（今日 + 08-16 + 03-14）
+    await this.visitModel.create({
+      visitNo: 'MZ20260816007',
+      patientId: zh._id,
+      empiId: zh.empiId,
+      patientName: zh.name,
+      type: 'followup',
+      doctorId: 'doctor-d1027',
+      doctorName: '王医生',
+      department: '呼吸内科',
+      status: 'completed',
+      visitedAt: daysAgo(14, 10, 30)
+    })
+    await this.visitModel.create({
+      visitNo: 'MZ20260314002',
+      patientId: zh._id,
+      empiId: zh.empiId,
+      patientName: zh.name,
+      type: 'followup',
+      doctorId: 'doctor-d1027',
+      doctorName: '王医生',
+      department: '呼吸内科',
+      status: 'completed',
+      visitedAt: daysAgo(169, 9, 15)
+    })
+    // 王强：5 次就诊（今日 + 08-12 + 07-05 + 06-10 + 05-08）
+    for (const [no, ago] of [
+      ['MZ20260812007', 18],
+      ['MZ20260705006', 56],
+      ['MZ20260610005', 81],
+      ['MZ20260508004', 114]
+    ] as Array<[string, number]>) {
+      await this.visitModel.create({
+        visitNo: no,
+        patientId: wq._id,
+        empiId: wq.empiId,
+        patientName: wq.name,
+        type: 'followup',
+        doctorId: 'doctor-d1027',
+        doctorName: '王医生',
+        department: '心内科',
+        status: 'completed',
+        visitedAt: daysAgo(ago, 14, 0)
+      })
+    }
+
     // ---------- 今日就诊 18 条（复诊 11 / 首诊 7） ----------
-    const followups = [zh, wq, cj, ljj, wf, sl]
+    // 张丽华今日 08:52 建档首诊（对齐 UI 稿就诊旅程）
+    const zhangToday = new Date()
+    zhangToday.setHours(8, 52, 0, 0)
+    await this.visitModel.create({
+      visitNo: `MZ${zhangToday.toISOString().slice(0, 10).replace(/-/g, '')}012`,
+      patientId: zh._id,
+      empiId: zh.empiId,
+      patientName: zh.name,
+      type: 'followup',
+      doctorId: 'doctor-d1027',
+      doctorName: '王医生',
+      department: '呼吸内科',
+      chiefComplaint: '复诊',
+      status: 'in_progress',
+      visitedAt: zhangToday
+    })
+
+    const followups = [wq, cj, ljj, wf, sl, lgh, zl, wgq, zxh, fjj]
     const firstNames = ['赵小敏', '钱慧', '孙国栋', '李婉']
     let visitSeq = 1
-    for (let i = 0; i < 18; i++) {
-      const isFollowup = i < 11
+    for (let i = 0; i < 17; i++) {
+      const isFollowup = i < 10
       let patient: PatientDocument
       let name: string
       if (isFollowup) {
-        patient = followups[i % followups.length]
+        patient = followups[i]
         name = patient.name
       } else {
         patient = null
-        name = firstNames[i % firstNames.length]
+        name = firstNames[(i - 10) % firstNames.length]
       }
       const d = new Date()
-      d.setHours(8 + Math.floor(i / 2), (i % 2) * 30, 0, 0)
+      d.setHours(9 + Math.floor(i / 2), (i % 2) * 30, 0, 0)
       await this.visitModel.create({
         visitNo: `MZ${d.toISOString().slice(0, 10).replace(/-/g, '')}${String(visitSeq++).padStart(4, '0')}`,
         patientId: patient ? patient._id : new Types.ObjectId(),
@@ -95,7 +173,7 @@ export class SeedService implements OnModuleInit {
         doctorName: '王医生',
         department: '呼吸内科',
         chiefComplaint: isFollowup ? '复诊' : '首诊',
-        status: i < 3 ? 'in_progress' : 'completed',
+        status: i < 2 ? 'in_progress' : 'completed',
         visitedAt: d
       })
     }
@@ -158,6 +236,20 @@ export class SeedService implements OnModuleInit {
       },
       true,
       daysAgo(14, 10, 30)
+    )
+    await mkRecord(
+      'MZ20260314002',
+      'outpatient',
+      zh,
+      '呼吸内科',
+      '王医生',
+      {
+        chiefComplaint: '发热、咳嗽 3 天。',
+        diagnosis: [{ code: 'J15.9', name: '社区获得性肺炎' }],
+        prescriptionSummary: '头孢呋辛钠 1.5g ivgtt bid × 5天。'
+      },
+      true,
+      daysAgo(169, 9, 15)
     )
     await mkRecord(
       'MZ20260812007',

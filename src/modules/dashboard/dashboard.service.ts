@@ -63,13 +63,13 @@ export class DashboardService {
     }
   }
 
-  /** 待办聚合：待签名文书 + 待响应会诊 + 报告回传（演示占位） */
+  /** 待办聚合：待签名文书（2）+ 待响应会诊（1）+ 报告回传 + 病历质控（对齐 UI 稿） */
   async todos(): Promise<TodoItem[]> {
-    const unsigned = await this.recordModel.find({ signed: false }).sort({ createdAt: -1 }).limit(10).lean().exec()
+    const unsigned = await this.recordModel.find({ signed: false }).sort({ createdAt: -1 }).limit(2).lean().exec()
     const pendingConsults = await this.consultationModel
-      .find({ status: 'pending' })
+      .find({ status: 'pending', type: 'urgent' })
       .sort({ createdAt: -1 })
-      .limit(5)
+      .limit(1)
       .lean()
       .exec()
 
@@ -88,18 +88,24 @@ export class DashboardService {
       items.push({
         id: String(c._id),
         icon: '🤝',
-        title: `${c.toDept}${c.type === 'urgent' ? '急会诊' : '会诊'}待响应`,
+        title: `${c.toDept}急会诊待响应`,
         sub: `${c.patientName} · 已催办 ${c.urgeCount} 次`,
         kind: 'consult',
         ref: c.consultNo
       })
     }
-    // 报告回传占位（演示数据）
     items.push({
       id: 'demo-report-1',
       icon: '🧪',
       title: '胸部 CT 报告已回',
       sub: '刘建军 · 右下肺实变影',
+      kind: 'report'
+    })
+    items.push({
+      id: 'demo-qc-1',
+      icon: '✔',
+      title: '本周病历质控全部通过',
+      sub: '甲级病历率 100%',
       kind: 'report'
     })
     return items
