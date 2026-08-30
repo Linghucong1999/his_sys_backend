@@ -19,18 +19,20 @@ export class UsersService implements OnModuleInit {
 
   constructor(@InjectModel(User.name) private readonly userModel: Model<UserDocument>) {}
 
-  /** 首次启动时创建种子管理员（admin / admin123） */
+  /** 首次启动时创建种子账号（密码统一 123456） */
   async onModuleInit(): Promise<void> {
     const count = await this.userModel.countDocuments()
     if (count === 0) {
-      await this.create({
-        username: 'admin',
-        password: 'admin123',
-        realName: '系统管理员',
-        roles: ['admin'],
-        department: '信息科'
-      })
-      this.logger.log('已创建初始管理员账号：admin / admin123（请登录后尽快修改）')
+      const seeds: CreateUserInput[] = [
+        { username: 'admin', password: 'admin123', realName: '系统管理员', roles: ['admin'], department: '信息科' },
+        { username: 'D1027', password: '123456', realName: '王医生', roles: ['doctor'], department: '呼吸内科', title: '主治医师' },
+        { username: 'N1001', password: '123456', realName: '李护士', roles: ['nurse'], department: '呼吸内科病区', title: '护师' },
+        { username: 'P2001', password: '123456', realName: '张药师', roles: ['pharmacist'], department: '药剂科', title: '药师' }
+      ]
+      for (const s of seeds) {
+        await this.create(s)
+      }
+      this.logger.log('已创建种子账号：admin/admin123（管理员）、D1027/123456（医生）、N1001/123456（护士）、P2001/123456（药师）')
     }
   }
 
