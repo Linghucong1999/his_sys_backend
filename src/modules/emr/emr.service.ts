@@ -26,19 +26,68 @@ export class EmrService {
     private readonly idCounter: IdCounterService
   ) {}
 
-  async list(query: {
-    keyword?: string
-    signed?: string
-    type?: string
-  }): Promise<FlattenMaps<MedicalRecordDocument>[]> {
+  async list(
+    query: {
+      keyword?: string
+      signed?: string
+      type?: string
+    },
+    doctorId?: string
+  ): Promise<FlattenMaps<MedicalRecordDocument>[]> {
+    const filter = this.buildFilter(query, doctorId)
+    return this.recordModel.find(filter).sort({ visitedAt: -1 }).limit(100).lean().exec()
+  }
+
+  /** 分页列表（EMR 左侧列表翻页用） */
+  async pagedList(
+    query: {
+      keyword?: string
+      signed?: string
+      type?: string
+      recent?: string
+      page?: number
+      pageSize?: number
+    },
+    doctorId?: string
+  ): Promise<{ items: FlattenMaps<MedicalRecordDocument>[]; total: number }> {
+    const filter = this.buildFilter(query, doctorId)
+    const size = Math.min(Math.max(query.pageSize ?? 10, 1), 100)
+    const page = Math.max(query.page ?? 1, 1)
+    const [items, total] = await Promise.all([
+      this.recordModel
+        .find(filter)
+        .sort({ visitedAt: -1 })
+        .skip((page - 1) * size)
+        .limit(size)
+        .lean()
+        .exec(),
+      this.recordModel.countDocuments(filter)
+    ])
+    return { items, total }
+  }
+
+  private buildFilter(
+    query: {
+      keyword?: string
+      signed?: string
+      type?: string
+      recent?: string
+    },
+    doctorId?: string
+  ): Record<string, unknown> {
     const filter: Record<string, unknown> = {}
+    if (doctorId) filter.doctorId = doctorId
     if (query.type) filter.type = query.type
     if (query.signed === 'true') filter.signed = true
     if (query.signed === 'false') filter.signed = false
     if (query.keyword) {
       filter.patientName = { $regex: query.keyword, $options: 'i' }
     }
-    return this.recordModel.find(filter).sort({ visitedAt: -1 }).limit(100).lean().exec()
+    if (query.recent === 'true') {
+      const from = new Date(Date.now() - 30 * 86400000)
+      filter.visitedAt = { $gte: from }
+    }
+    return filter
   }
 
   async findById(id: string): Promise<MedicalRecordDocument | null> {
@@ -46,19 +95,26 @@ export class EmrService {
   }
 
   /** 保存/更新病历（未签名前可编辑） */
-  async save(input: SaveRecordInput, doctorName: string, id?: string): Promise<MedicalRecordDocument> {
+  async save(
+    input: SaveRecordInput,
+    doctorName: string,
+    doctorId?: string,
+    id?: string
+  ): Promise<MedicalRecordDocument> {
     if (id) {
       const doc = await this.recordModel.findById(id).exec()
       if (!doc) throw new NotFoundException('病历不存在')
       if (doc.signed) throw new NotFoundException('病历已 CA 签名，不可修改')
       doc.set(input)
       doc.doctorName = doctorName
+      if (doctorId) doc.doctorId = doctorId
       return doc.save()
     }
     return this.recordModel.create({
       ...input,
       recordNo: await this.idCounter.nextRecordNo(),
       doctorName,
+      doctorId,
       patientId: new Types.ObjectId(input.patientId),
       visitId: input.visitId ? new Types.ObjectId(input.visitId) : undefined,
       visitedAt: input.visitedAt ? new Date(input.visitedAt) : new Date()

@@ -61,8 +61,43 @@ export class EmrController {
   constructor(private readonly emrService: EmrService) {}
 
   @Get('records')
-  list(@Query('keyword') keyword?: string, @Query('signed') signed?: string, @Query('type') type?: string) {
-    return this.emrService.list({ keyword, signed, type })
+  list(
+    @Query('keyword') keyword?: string,
+    @Query('signed') signed?: string,
+    @Query('type') type?: string,
+    @CurrentUser() user?: JwtUserPayload
+  ) {
+    return this.emrService.list({ keyword, signed, type }, this.scopeDoctorId(user))
+  }
+
+  /** 分页列表（EMR 左侧列表翻页用） */
+  @Get('records/page')
+  page(
+    @Query('keyword') keyword?: string,
+    @Query('signed') signed?: string,
+    @Query('type') type?: string,
+    @Query('recent') recent?: string,
+    @Query('page') page = '1',
+    @Query('pageSize') pageSize = '10',
+    @CurrentUser() user?: JwtUserPayload
+  ) {
+    return this.emrService.pagedList(
+      {
+        keyword,
+        signed,
+        type,
+        recent,
+        page: Number(page),
+        pageSize: Number(pageSize)
+      },
+      this.scopeDoctorId(user)
+    )
+  }
+
+  /** 数据权限：admin 可见全部，医生仅可见自己名下病历 */
+  private scopeDoctorId(user?: JwtUserPayload): string | undefined {
+    if (!user) return undefined
+    return user.roles.includes('admin') ? undefined : user.userId
   }
 
   @Get('records/:id')
@@ -72,12 +107,12 @@ export class EmrController {
 
   @Post('records')
   save(@Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
-    return this.emrService.save(dto, user.username)
+    return this.emrService.save(dto, user.username, user.userId)
   }
 
   @Put('records/:id')
   update(@Param('id') id: string, @Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
-    return this.emrService.save(dto, user.username, id)
+    return this.emrService.save(dto, user.username, user.userId, id)
   }
 
   /** CA 签名 */

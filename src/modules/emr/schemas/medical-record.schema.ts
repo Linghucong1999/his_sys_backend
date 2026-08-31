@@ -30,6 +30,10 @@ export class MedicalRecord {
   @Prop({ required: true })
   doctorName: string
 
+  /** 归属医生（数据权限隔离：医生仅可见自己的病历） */
+  @Prop({ index: true })
+  doctorId?: string
+
   @Prop({ index: true })
   visitId?: Types.ObjectId
 
