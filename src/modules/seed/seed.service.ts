@@ -226,6 +226,7 @@ export class SeedService implements OnModuleInit {
         patientName: p.name,
         department: dept,
         doctorName: doc,
+        doctorId,
         signed,
         signedAt: signed ? at : undefined,
         signedBy: signed ? doc : undefined,
