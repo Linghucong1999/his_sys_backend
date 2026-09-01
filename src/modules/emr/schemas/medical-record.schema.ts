@@ -55,6 +55,10 @@ export class MedicalRecord {
   @Prop()
   prescriptionSummary?: string
 
+  /** 检查申请（CA 签名前置条件之一） */
+  @Prop()
+  examRequest?: string
+
   @Prop({ default: false, index: true })
   signed: boolean
 

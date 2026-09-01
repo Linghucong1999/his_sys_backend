@@ -51,6 +51,10 @@ class SaveRecordDto {
 
   @IsOptional()
   @IsString()
+  examRequest?: string
+
+  @IsOptional()
+  @IsString()
   visitedAt?: string
 }
 

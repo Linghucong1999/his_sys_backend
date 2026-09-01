@@ -16,6 +16,7 @@ export interface SaveRecordInput {
   physicalExam?: string
   diagnosis?: Array<{ code: string; name: string }>
   prescriptionSummary?: string
+  examRequest?: string
   visitedAt?: string
 }
 
