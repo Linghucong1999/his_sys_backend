@@ -35,4 +35,12 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   medicalRecordNo?: string
+
+  @ApiPropertyOptional({
+    enum: ['市职工医保', '城乡居民医保', '新农合', '商业保险', '自费'],
+    example: '市职工医保'
+  })
+  @IsOptional()
+  @IsIn(['市职工医保', '城乡居民医保', '新农合', '商业保险', '自费'])
+  insuranceType?: string
 }

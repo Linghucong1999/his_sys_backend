@@ -60,6 +60,8 @@ export class SeedService implements OnModuleInit {
     const doctorWang = await this.userModel.findOne({ username: 'D1027' }).exec()
     const doctorId = doctorWang ? String(doctorWang._id) : 'doctor-d1027'
     // ---------- 患者 ----------
+    const insurancePool = ['市职工医保', '城乡居民医保', '新农合', '商业保险', '自费']
+    let insuranceIdx = 0
     const mk = (
       name: string,
       gender: string,
@@ -74,7 +76,8 @@ export class SeedService implements OnModuleInit {
         birthDate: daysAgo(age * 365, 0, 0),
         phone,
         address: '演示地址',
-        medicalRecordNo: recordNo
+        medicalRecordNo: recordNo,
+        insuranceType: insurancePool[insuranceIdx++ % insurancePool.length]
       })
 
     const d = new Date()

@@ -33,6 +33,10 @@ export class Patient {
   @Prop({ index: true, unique: true, sparse: true })
   medicalRecordNo?: string
 
+  /** 医保类型：市职工医保 / 城乡居民医保 / 新农合 / 商业保险 / 自费 */
+  @Prop({ default: '自费' })
+  insuranceType?: string
+
   @Prop({ default: 'active', enum: ['active', 'merged', 'inactive'] })
   status?: string
 
