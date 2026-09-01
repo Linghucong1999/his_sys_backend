@@ -21,7 +21,7 @@ export interface TodoItem {
   icon: string
   title: string
   sub: string
-  kind: 'sign' | 'consult' | 'report'
+  kind: 'sign' | 'rx' | 'emr' | 'consult' | 'report'
   ref?: string
 }
 
@@ -59,21 +59,52 @@ export class DashboardService {
       pendingConsultations,
       activeConsultations,
       completedConsultationsToday: completedToday,
-      todoCount: pendingSigns + pendingConsultations
+      todoCount: (await this.todos()).length
     }
   }
 
-  /** 待办聚合：待签名文书（2）+ 待响应会诊（1）+ 报告回传 + 病历质控（对齐 UI 稿） */
+  /** 待办聚合：仅「病历未完成」+「未编写处方」+「待 CA 签名」三类事项 */
   async todos(): Promise<TodoItem[]> {
-    const unsigned = await this.recordModel.find({ signed: false }).sort({ createdAt: -1 }).limit(2).lean().exec()
-    const pendingConsults = await this.consultationModel
-      .find({ status: 'pending', type: 'urgent' })
-      .sort({ createdAt: -1 })
-      .limit(1)
+    // 接诊中的就诊
+    const pendingVisits = await this.visitModel
+      .find({ status: 'in_progress' })
+      .sort({ visitedAt: -1 })
+      .limit(20)
       .lean()
       .exec()
+    const withRxIds = await this.recordModel.distinct('patientId', { type: 'prescription' })
+    const withRxSet = new Set(withRxIds.map((id) => String(id)))
+    const withEmrIds = await this.recordModel.distinct('patientId', { type: 'outpatient' })
+    const withEmrSet = new Set(withEmrIds.map((id) => String(id)))
+    // 待 CA 签名：未签名病历/处方
+    const unsigned = await this.recordModel.find({ signed: false }).sort({ createdAt: -1 }).limit(10).lean().exec()
 
     const items: TodoItem[] = []
+    // 1. 病历未完成（接诊中且尚无门诊病历）
+    for (const v of pendingVisits) {
+      if (withEmrSet.has(String(v.patientId))) continue
+      items.push({
+        id: `emr-${String(v._id)}`,
+        icon: '📋',
+        title: `病历未完成 · ${v.patientName}`,
+        sub: `${v.department} · 接诊中`,
+        kind: 'emr',
+        ref: v.visitNo
+      })
+    }
+    // 2. 未编写处方（接诊中且尚无处方记录）
+    for (const v of pendingVisits) {
+      if (withRxSet.has(String(v.patientId))) continue
+      items.push({
+        id: `rx-${String(v._id)}`,
+        icon: '💊',
+        title: `待开具处方 · ${v.patientName}`,
+        sub: `${v.department} · 接诊中`,
+        kind: 'rx',
+        ref: v.visitNo
+      })
+    }
+    // 3. 待 CA 签名
     for (const r of unsigned) {
       items.push({
         id: String(r._id),
@@ -84,30 +115,6 @@ export class DashboardService {
         ref: r.recordNo
       })
     }
-    for (const c of pendingConsults) {
-      items.push({
-        id: String(c._id),
-        icon: '🤝',
-        title: `${c.toDept}急会诊待响应`,
-        sub: `${c.patientName} · 已催办 ${c.urgeCount} 次`,
-        kind: 'consult',
-        ref: c.consultNo
-      })
-    }
-    items.push({
-      id: 'demo-report-1',
-      icon: '🧪',
-      title: '胸部 CT 报告已回',
-      sub: '刘建军 · 右下肺实变影',
-      kind: 'report'
-    })
-    items.push({
-      id: 'demo-qc-1',
-      icon: '✔',
-      title: '本周病历质控全部通过',
-      sub: '甲级病历率 100%',
-      kind: 'report'
-    })
     return items
   }
 
