@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { HydratedDocument, Types } from 'mongoose'
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose'
 
 export type BedDocument = HydratedDocument<Bed>
 
@@ -15,7 +15,7 @@ export class Bed {
   @Prop({ required: true, enum: ['occupied', 'empty'], index: true })
   status: 'occupied' | 'empty'
 
-  @Prop({ type: Types.ObjectId, ref: 'Patient' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Patient' })
   patientId?: Types.ObjectId
 
   @Prop()

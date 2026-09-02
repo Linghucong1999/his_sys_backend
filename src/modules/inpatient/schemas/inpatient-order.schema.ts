@@ -1,12 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { HydratedDocument, Types } from 'mongoose'
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose'
 
 export type InpatientOrderDocument = HydratedDocument<InpatientOrder>
 
 /** 住院医嘱（长期/临时） */
 @Schema({ versionKey: false, timestamps: true })
 export class InpatientOrder {
-  @Prop({ type: Types.ObjectId, ref: 'Patient', required: true, index: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Patient', required: true, index: true })
   patientId: Types.ObjectId
 
   @Prop({ required: true, index: true })
