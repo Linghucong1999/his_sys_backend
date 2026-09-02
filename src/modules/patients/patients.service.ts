@@ -3,16 +3,45 @@ import { InjectModel } from '@nestjs/mongoose'
 import { FlattenMaps, Model, Types } from 'mongoose'
 import { Patient, PatientDocument } from './schemas/patient.schema'
 import { Visit, VisitDocument } from '../outpatient/schemas/visit.schema'
+import { MedicalRecord, MedicalRecordDocument } from '../emr/schemas/medical-record.schema'
 import { CreatePatientDto } from './dto/create-patient.dto'
 import { IdCounterService } from '../id-counter/id-counter.service'
+
+export type PatientWithPending = FlattenMaps<PatientDocument> & { pending: string[] }
 
 @Injectable()
 export class PatientsService {
   constructor(
     @InjectModel(Patient.name) private readonly patientModel: Model<PatientDocument>,
     @InjectModel(Visit.name) private readonly visitModel: Model<VisitDocument>,
+    @InjectModel(MedicalRecord.name) private readonly recordModel: Model<MedicalRecordDocument>,
     private readonly idCounter: IdCounterService
   ) {}
+
+  /**
+   * 计算患者的待完成接诊项：
+   * 未签名门诊病历按字段缺失判断（主诉→未写病历、处方摘要→未写处方、检查申请→未写检查）；
+   * 接诊中无门诊病历则三项全缺；全部已签名则无待办。
+   */
+  private async pendingOf(patientId: Types.ObjectId): Promise<string[]> {
+    const unsigned = await this.recordModel
+      .find({ patientId, signed: false, type: { $in: ['outpatient', 'prescription'] } })
+      .lean()
+      .exec()
+    if (unsigned.length === 0) return []
+    const pending = new Set<string>()
+    const hasOutpatient = unsigned.some((r) => r.type === 'outpatient')
+    for (const r of unsigned) {
+      if (r.type === 'outpatient' && !r.chiefComplaint?.trim()) pending.add('未写病历')
+      if (!r.prescriptionSummary?.trim()) pending.add('未写处方')
+      if (r.type === 'outpatient' && !r.examRequest?.trim()) pending.add('未写检查')
+    }
+    if (!hasOutpatient) {
+      // 只有处方未签名但无门诊病历：视为病历未完成
+      pending.add('未写病历')
+    }
+    return [...pending]
+  }
 
   async create(dto: CreatePatientDto): Promise<PatientDocument> {
     if (dto.idCardNo) {
@@ -35,16 +64,17 @@ export class PatientsService {
       .exec()
   }
 
-  async search(keyword: string, limit = 20): Promise<FlattenMaps<PatientDocument>[]> {
+  async search(keyword: string, limit = 20): Promise<PatientWithPending[]> {
     // 支持姓名 / 手机号 / 姓名+手机号组合（空格分隔，各片段 AND 匹配）
     const tokens = keyword.trim().split(/\s+/).filter(Boolean)
     const filter = this.buildSearchFilter(tokens)
-    return this.patientModel
+    const items = await this.patientModel
       .find(filter)
       .sort({ createdAt: -1 })
       .limit(Math.min(limit, 50))
       .lean()
       .exec()
+    return this.attachPending(items)
   }
 
   /** 分页列表（患者一览翻页用）：仅当前医生接诊过的患者，按建档时间倒序 */
@@ -52,7 +82,7 @@ export class PatientsService {
     page = 1,
     pageSize = 10,
     doctorId?: string
-  ): Promise<{ items: FlattenMaps<PatientDocument>[]; total: number }> {
+  ): Promise<{ items: PatientWithPending[]; total: number }> {
     const size = Math.min(Math.max(pageSize, 1), 50)
     let filter: Record<string, unknown> = {}
     if (doctorId) {
@@ -69,7 +99,18 @@ export class PatientsService {
         .exec(),
       this.patientModel.countDocuments(filter)
     ])
-    return { items, total }
+    return { items: await this.attachPending(items), total }
+  }
+
+  /** 为患者列表附加待完成接诊项 */
+  private async attachPending(items: FlattenMaps<PatientDocument>[]): Promise<PatientWithPending[]> {
+    const pendingMap = new Map<string, string[]>()
+    await Promise.all(
+      items.map(async (p) => {
+        pendingMap.set(String(p._id), await this.pendingOf(p._id as Types.ObjectId))
+      })
+    )
+    return items.map((p) => ({ ...p, pending: pendingMap.get(String(p._id)) ?? [] }))
   }
 
   private buildSearchFilter(tokens: string[]): Record<string, unknown> {
