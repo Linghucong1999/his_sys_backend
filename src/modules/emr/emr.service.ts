@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { FlattenMaps, Model, Types } from 'mongoose'
-import { MedicalRecord, MedicalRecordDocument } from './schemas/medical-record.schema'
+import { MedicalRecord, MedicalRecordDocument, RxItem } from './schemas/medical-record.schema'
 import { IdCounterService } from '../id-counter/id-counter.service'
 import { Dictionary, DictionaryDocument } from '../dictionaries/schemas/dictionary.schema'
 
@@ -17,6 +17,7 @@ export interface SaveRecordInput {
   physicalExam?: string
   diagnosis?: Array<{ code: string; name: string }>
   prescriptionSummary?: string
+  prescriptionItems?: RxItem[]
   examRequest?: string
   visitedAt?: string
 }
@@ -150,10 +151,10 @@ export class EmrService {
     const missing: string[] = []
     if (doc.type === 'outpatient') {
       if (!doc.chiefComplaint?.trim()) missing.push('门诊病历（主诉未填写）')
-      if (!doc.prescriptionSummary?.trim()) missing.push('处方')
+      if (!(doc.prescriptionSummary?.trim() || doc.prescriptionItems?.length)) missing.push('处方')
       if (!doc.examRequest?.trim()) missing.push('检查申请')
     } else if (doc.type === 'prescription') {
-      if (!doc.prescriptionSummary?.trim()) missing.push('处方')
+      if (!(doc.prescriptionSummary?.trim() || doc.prescriptionItems?.length)) missing.push('处方')
     } else if (doc.type === 'admission') {
       if (!doc.chiefComplaint?.trim()) missing.push('门诊病历（主诉未填写）')
     }

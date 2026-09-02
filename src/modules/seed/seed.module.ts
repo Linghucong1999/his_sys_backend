@@ -10,6 +10,7 @@ import { InpatientOrder, InpatientOrderSchema } from '../inpatient/schemas/inpat
 import { Dictionary, DictionarySchema } from '../dictionaries/schemas/dictionary.schema'
 import { IdCounterModule } from '../id-counter/id-counter.module'
 import { User, UserSchema } from '../users/schemas/user.schema'
+import { DrugManual, DrugManualSchema } from '../drug-manual/schemas/drug-manual.schema'
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { User, UserSchema } from '../users/schemas/user.schema'
       { name: Bed.name, schema: BedSchema },
       { name: InpatientOrder.name, schema: InpatientOrderSchema },
       { name: Dictionary.name, schema: DictionarySchema },
-      { name: User.name, schema: UserSchema }
+      { name: User.name, schema: UserSchema },
+      { name: DrugManual.name, schema: DrugManualSchema }
     ]),
     IdCounterModule
   ],

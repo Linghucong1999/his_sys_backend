@@ -11,6 +11,10 @@ export interface SearchResultItem {
   sub?: string
   ref?: string
   patientId?: string
+  /** 药品详情（说明书弹窗用） */
+  manufacturer?: string
+  instructions?: string
+  spec?: string
 }
 
 /** Cmd+K 聚合搜索：患者调档 / 病历 / 药品目录 / 功能命令 */
@@ -62,11 +66,15 @@ export class SearchService {
       })
     }
     for (const d of drugs) {
+      const extra = (d.extra as Record<string, string>) ?? {}
       items.push({
         kind: 'drug',
-        title: `${d.name} · ${(d.extra as Record<string, string>)?.spec ?? ''}`,
+        title: `${d.name} · ${extra.spec ?? ''}`,
         sub: '药品目录',
-        ref: d.code
+        ref: d.code,
+        manufacturer: extra.manufacturer,
+        instructions: extra.instructions,
+        spec: extra.spec
       })
     }
     return items.slice(0, limit)

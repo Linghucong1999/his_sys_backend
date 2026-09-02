@@ -10,6 +10,7 @@ import { InpatientOrder, InpatientOrderDocument } from '../inpatient/schemas/inp
 import { Dictionary, DictionaryDocument } from '../dictionaries/schemas/dictionary.schema'
 import { IdCounterService } from '../id-counter/id-counter.service'
 import { User, UserDocument } from '../users/schemas/user.schema'
+import { DrugManual, DrugManualDocument } from '../drug-manual/schemas/drug-manual.schema'
 
 function daysAgo(days: number, hour = 10, minute = 0): Date {
   const d = new Date()
@@ -35,10 +36,13 @@ export class SeedService implements OnModuleInit {
     private readonly orderModel: Model<InpatientOrderDocument>,
     @InjectModel(Dictionary.name) private readonly dictionaryModel: Model<DictionaryDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(DrugManual.name) private readonly manualModel: Model<DrugManualDocument>,
     private readonly idCounter: IdCounterService
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // 药品说明书库独立同步（与业务种子解耦）
+    await this.syncDrugManualsFromDictionaries()
     const exists = await this.patientModel.countDocuments()
     if (exists > 0) {
       this.logger.log('已存在业务数据，跳过演示数据种子')
@@ -53,6 +57,23 @@ export class SeedService implements OnModuleInit {
     await this.idCounter.bump(`record:${day}`, 40)
     await this.idCounter.bump('empi', 1)
     this.logger.log('演示数据种子完成（患者/就诊/病历/会诊/床位/医嘱/字典）')
+  }
+
+  /** 从药品字典同步说明书库（仅当说明书库为空时） */
+  private async syncDrugManualsFromDictionaries(): Promise<void> {
+    if ((await this.manualModel.countDocuments()) > 0) return
+    const drugs = await this.dictionaryModel.find({ category: 'drug' }).lean().exec()
+    const manuals = drugs.map((d) => ({
+      drugName: d.name,
+      spec: (d.extra as Record<string, string> | undefined)?.spec,
+      manufacturer: (d.extra as Record<string, string> | undefined)?.manufacturer,
+      fullText: (d.extra as Record<string, string> | undefined)?.instructions,
+      source: 'seed'
+    }))
+    if (manuals.length > 0) {
+      await this.manualModel.insertMany(manuals as DrugManual[])
+      this.logger.log(`药品说明书库已同步 ${manuals.length} 条`)
+    }
   }
 
   private async seed(): Promise<void> {
@@ -447,7 +468,105 @@ export class SeedService implements OnModuleInit {
     })
 
     // ---------- 字典 ----------
-    const dicts: Array<Partial<Dictionary>> = [
+    const drugInstructions: Record<string, { spec: string; manufacturer: string; instructions: string }> = {
+      头孢呋辛钠: {
+        spec: '注射用 1.5g/支',
+        manufacturer: '华北制药股份有限公司',
+        instructions: '第二代头孢菌素类抗生素。用于敏感菌所致的呼吸道、泌尿道、皮肤软组织感染。用法：成人 1.5g 静脉滴注，每 8 小时一次；疗程 5-10 天。对头孢菌素过敏者禁用，与氨基糖苷类合用需监测肾功能。'
+      },
+      左氧氟沙星: {
+        spec: '注射用 0.5g/瓶',
+        manufacturer: '扬子江药业集团',
+        instructions: '氟喹诺酮类广谱抗菌药。用于社区获得性肺炎、泌尿系感染等。用法：成人 0.5g 静脉滴注，每日一次；疗程 7-14 天。18 岁以下禁用，孕妇及哺乳期妇女慎用，避免与含铝镁抗酸剂同服。'
+      },
+      氨溴索口服液: {
+        spec: '10ml/支',
+        manufacturer: '山东齐鲁制药有限公司',
+        instructions: '黏液溶解剂。用于痰液黏稠不易咳出者。用法：成人 10ml 口服，每日三次；饭后服用。偶见恶心、胃部不适，对本品过敏者禁用。'
+      },
+      阿莫西林: {
+        spec: '胶囊 0.5g/粒',
+        manufacturer: '广州白云山制药总厂',
+        instructions: '广谱青霉素类抗生素。用于敏感菌所致呼吸道、泌尿道感染。用法：成人 0.5g 口服，每日三次；疗程 5-7 天。青霉素过敏者禁用，用药前需皮试。'
+      },
+      布地奈德: {
+        spec: '吸入剂 1mg/支',
+        manufacturer: '阿斯利康制药有限公司',
+        instructions: '糖皮质激素类吸入剂。用于支气管哮喘、慢阻肺的长期控制。用法：每次 1 吸，每日两次；吸入后漱口。不宜用于哮喘急性发作，肺结核患者慎用。'
+      },
+      硝苯地平缓释片: {
+        spec: '20mg/片',
+        manufacturer: '拜耳医药保健有限公司',
+        instructions: '钙通道阻滞剂。用于高血压、心绞痛。用法：成人 20mg 口服，每日一次；整片吞服不可嚼碎。常见头痛、面部潮红、踝部水肿，低血压患者慎用。'
+      },
+      阿司匹林: {
+        spec: '肠溶片 100mg/片',
+        manufacturer: '石药集团欧意药业',
+        instructions: '抗血小板聚集。用于冠心病、脑卒中的二级预防。用法：100mg 口服，每日一次，饭前整片吞服。活动性消化道出血、阿司匹林哮喘者禁用。'
+      },
+      阿托伐他汀: {
+        spec: '片剂 20mg/片',
+        manufacturer: '辉瑞制药有限公司',
+        instructions: '他汀类调脂药。用于高胆固醇血症、动脉粥样硬化性心血管病防治。用法：20mg 口服，每晚一次。定期监测肝功能与肌酸激酶，孕妇禁用。'
+      },
+      二甲双胍: {
+        spec: '片剂 0.5g/片',
+        manufacturer: '中美上海施贵宝制药',
+        instructions: '双胍类口服降糖药。2 型糖尿病一线用药。用法：0.5g 口服，每日两次，随餐服用。禁用于肾功能不全（eGFR<30）、严重感染及缺氧状态。'
+      },
+      奥美拉唑: {
+        spec: '肠溶胶囊 20mg/粒',
+        manufacturer: '江苏奥赛康药业',
+        instructions: '质子泵抑制剂。用于胃溃疡、十二指肠溃疡、反流性食管炎。用法：20mg 口服，每日一次，晨起空腹吞服。长期使用需注意维生素 B12 吸收。'
+      },
+      蒙脱石散: {
+        spec: '散剂 3g/袋',
+        manufacturer: '博福-益普生制药',
+        instructions: '消化道黏膜保护剂。用于成人及儿童急慢性腹泻。用法：3g 口服，每日三次，溶于 50ml 温水。与其他药物间隔 1 小时服用。'
+      },
+      对乙酰氨基酚: {
+        spec: '片剂 0.5g/片',
+        manufacturer: '上海强生制药',
+        instructions: '解热镇痛药。用于发热、头痛、关节痛。用法：0.5g 口服，发热或疼痛时服用，每日不超过 4 次；连续使用不超过 3 天。肝功能不全者慎用。'
+      },
+      美托洛尔: {
+        spec: '片剂 25mg/片',
+        manufacturer: '阿斯利康制药有限公司',
+        instructions: 'β1 受体阻滞剂。用于高血压、心绞痛、心律失常。用法：25mg 口服，每日两次。支气管哮喘、二度以上房室传导阻滞者禁用。'
+      },
+      缬沙坦: {
+        spec: '胶囊 80mg/粒',
+        manufacturer: '诺华制药有限公司',
+        instructions: '血管紧张素Ⅱ受体拮抗剂。用于高血压。用法：80mg 口服，每日一次。孕妇禁用，与保钾利尿剂合用需监测血钾。'
+      },
+      甲巯咪唑: {
+        spec: '片剂 10mg/片',
+        manufacturer: '默克制药有限公司',
+        instructions: '抗甲状腺药。用于甲状腺功能亢进。用法：初始 10mg 口服，每日三次，维持量递减。定期复查血常规与肝功能，警惕粒细胞缺乏。'
+      }
+    }
+    const drugDicts = ([
+      { category: 'drug', code: 'DRG001', name: '头孢呋辛钠' },
+      { category: 'drug', code: 'DRG002', name: '左氧氟沙星' },
+      { category: 'drug', code: 'DRG003', name: '氨溴索口服液' },
+      { category: 'drug', code: 'DRG004', name: '阿莫西林' },
+      { category: 'drug', code: 'DRG005', name: '布地奈德' },
+      { category: 'drug', code: 'DRG006', name: '硝苯地平缓释片' },
+      { category: 'drug', code: 'DRG007', name: '阿司匹林' },
+      { category: 'drug', code: 'DRG008', name: '阿托伐他汀' },
+      { category: 'drug', code: 'DRG009', name: '二甲双胍' },
+      { category: 'drug', code: 'DRG010', name: '奥美拉唑' },
+      { category: 'drug', code: 'DRG011', name: '蒙脱石散' },
+      { category: 'drug', code: 'DRG012', name: '对乙酰氨基酚' },
+      { category: 'drug', code: 'DRG013', name: '美托洛尔' },
+      { category: 'drug', code: 'DRG014', name: '缬沙坦' },
+      { category: 'drug', code: 'DRG015', name: '甲巯咪唑' }
+    ] as Array<Partial<Dictionary>>).map((d) => ({
+      ...d,
+      extra: drugInstructions[d.name] ?? { spec: '', manufacturer: '', instructions: '' }
+    }))
+    // 基础字典：ICD-10 + 科室
+    const baseDicts: Array<Partial<Dictionary>> = [
       { category: 'icd10', code: 'J15.9', name: '社区获得性肺炎，非重症' },
       { category: 'icd10', code: 'J20.9', name: '急性支气管炎' },
       { category: 'icd10', code: 'I10', name: '原发性高血压' },
@@ -461,14 +580,20 @@ export class SeedService implements OnModuleInit {
       { category: 'department', code: 'YXK', name: '影像科' },
       { category: 'department', code: 'NFM', name: '内分泌科' },
       { category: 'department', code: 'XWK', name: '胸外科' },
-      { category: 'department', code: 'PWK', name: '普外科' },
-      { category: 'drug', code: 'DRG001', name: '头孢呋辛钠', extra: { spec: '注射用 1.5g' } },
-      { category: 'drug', code: 'DRG002', name: '左氧氟沙星', extra: { spec: '注射用 0.5g' } },
-      { category: 'drug', code: 'DRG003', name: '氨溴索口服液', extra: { spec: '10ml/支' } },
-      { category: 'drug', code: 'DRG004', name: '阿莫西林', extra: { spec: '胶囊 0.5g' } },
-      { category: 'drug', code: 'DRG005', name: '布地奈德', extra: { spec: '吸入剂 1mg' } },
-      { category: 'drug', code: 'DRG006', name: '硝苯地平缓释片', extra: { spec: '20mg/片' } }
+      { category: 'department', code: 'PWK', name: '普外科' }
     ]
-    await this.dictionaryModel.insertMany(dicts as Dictionary[])
+    await this.dictionaryModel.insertMany([...baseDicts, ...drugDicts] as Dictionary[])
+
+    // 药品说明书库：同步种子说明书（独立集合，供爬虫后续批量 upsert）
+    if ((await this.manualModel.countDocuments()) === 0) {
+      const manuals = Object.entries(drugInstructions).map(([drugName, v]) => ({
+        drugName,
+        spec: v.spec,
+        manufacturer: v.manufacturer,
+        fullText: v.instructions,
+        source: 'seed'
+      }))
+      await this.manualModel.insertMany(manuals as DrugManual[])
+    }
   }
 }

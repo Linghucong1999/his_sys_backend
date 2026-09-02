@@ -33,6 +33,7 @@ src/
     ├── outpatient/             # 门急诊就诊：医师直接接诊（无挂号）、今日就诊
     ├── emr/                    # 电子病历：病历/处方列表、保存、CA 签名
     ├── consultation/           # 会诊管理：发起/响应/催办
+    ├── drug-manual/            # 药品说明书库（drugmanuals 集合，支持爬虫 upsert 导入）
     ├── inpatient/              # 住院工作站：床位一览、长期/临时医嘱、停嘱
     ├── dictionaries/           # 基础字典：ICD-10/科室/药品目录
     ├── dashboard/              # 工作台聚合：统计摘要、待办聚合
@@ -111,6 +112,8 @@ npm run build && npm run start:prod
 | `POST /api/consultations/:id/respond` | 响应会诊 |
 | `GET /api/inpatient/beds` `GET /api/inpatient/orders` | 床位/医嘱 |
 | `GET /api/dictionaries/:category` | ICD-10/科室/药品字典 |
+| `GET /api/drug-manuals` | 药品说明书列表（keyword 搜索，含厂家/说明书全文） |
+| `POST /api/drug-manuals/upsert` | 爬虫导入说明书（按药名 upsert） |
 | `GET /api/search?q=` | Cmd+K 聚合搜索 |
 | `GET /api/audit-logs` | 审计日志（仅 admin） |
 

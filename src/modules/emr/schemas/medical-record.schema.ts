@@ -9,6 +9,16 @@ export interface DiagnosisItem {
   name: string
 }
 
+/** 结构化处方条目 */
+export interface RxItem {
+  drug: string
+  spec?: string
+  dose?: string
+  frequency?: string
+  route?: string
+  duration?: string
+}
+
 /** 病历文书（门诊/入院/处方），支持 CA 签名状态 */
 @Schema({ versionKey: false, timestamps: true })
 export class MedicalRecord {
@@ -54,6 +64,10 @@ export class MedicalRecord {
 
   @Prop()
   prescriptionSummary?: string
+
+  /** 结构化处方条目（新处方表单用；旧数据回退 prescriptionSummary） */
+  @Prop({ type: [{ drug: String, spec: String, dose: String, frequency: String, route: String, duration: String }], default: [] })
+  prescriptionItems: RxItem[]
 
   /** 检查申请（CA 签名前置条件之一） */
   @Prop()

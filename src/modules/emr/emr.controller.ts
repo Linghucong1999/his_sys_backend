@@ -50,6 +50,17 @@ class SaveRecordDto {
   prescriptionSummary?: string
 
   @IsOptional()
+  @IsArray()
+  prescriptionItems?: Array<{
+    drug: string
+    spec?: string
+    dose?: string
+    frequency?: string
+    route?: string
+    duration?: string
+  }>
+
+  @IsOptional()
   @IsString()
   examRequest?: string
 

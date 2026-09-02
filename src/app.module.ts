@@ -17,6 +17,7 @@ import { CaModule } from './modules/ca/ca.module'
 import { DashboardModule } from './modules/dashboard/dashboard.module'
 import { SearchModule } from './modules/search/search.module'
 import { SeedModule } from './modules/seed/seed.module'
+import { DrugManualModule } from './modules/drug-manual/drug-manual.module'
 
 @Module({
   imports: [
@@ -43,7 +44,8 @@ import { SeedModule } from './modules/seed/seed.module'
     CaModule,
     DashboardModule,
     SearchModule,
-    SeedModule
+    SeedModule,
+    DrugManualModule
   ],
   controllers: [AppController],
   providers: [AppService]
