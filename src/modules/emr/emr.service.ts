@@ -5,6 +5,7 @@ import { MedicalRecord, MedicalRecordDocument, RxItem } from './schemas/medical-
 import { IdCounterService } from '../id-counter/id-counter.service'
 import { Dictionary, DictionaryDocument } from '../dictionaries/schemas/dictionary.schema'
 import { DrugManualService } from '../drug-manual/drug-manual.service'
+import { dateStr } from '../../common/utils/date.util'
 
 export interface SaveRecordInput {
   patientId: string
@@ -176,7 +177,50 @@ export class EmrService {
     doc.signed = true
     doc.signedAt = new Date()
     doc.signedBy = signer.username
-    return doc.save()
+    const saved = await doc.save()
+    // 医生有处方的病历：签名时联动生成/更新处方笺（type: prescription）
+    await this.syncPrescriptionDoc(saved)
+    return saved
+  }
+
+  /** 处方笺联动：门诊病历含处方时，按患者+就诊时间 upsert 一条处方笺记录 */
+  private async syncPrescriptionDoc(doc: MedicalRecordDocument): Promise<void> {
+    if (doc.type !== 'outpatient') return
+    const hasRx = !!(doc.prescriptionSummary?.trim() || doc.prescriptionItems?.length)
+    if (!hasRx) return
+    const day = dateStr(doc.visitedAt ?? new Date())
+    const exists = await this.recordModel
+      .findOne({ patientId: doc.patientId, type: 'prescription', visitedAt: doc.visitedAt })
+      .exec()
+    if (exists) {
+      exists.prescriptionSummary = doc.prescriptionSummary
+      exists.prescriptionItems = doc.prescriptionItems
+      exists.diagnosis = doc.diagnosis
+      exists.doctorId = doc.doctorId
+      exists.doctorName = doc.doctorName
+      exists.signed = doc.signed
+      exists.signedAt = doc.signedAt
+      exists.signedBy = doc.signedBy
+      await exists.save()
+      return
+    }
+    await this.recordModel.create({
+      recordNo: `CF${day}${String(await this.idCounter.next(`prescription:${day}`)).padStart(4, '0')}`,
+      type: 'prescription',
+      patientId: doc.patientId,
+      patientName: doc.patientName,
+      department: doc.department,
+      doctorId: doc.doctorId,
+      doctorName: doc.doctorName,
+      visitId: doc.visitId,
+      diagnosis: doc.diagnosis,
+      prescriptionSummary: doc.prescriptionSummary,
+      prescriptionItems: doc.prescriptionItems,
+      visitedAt: doc.visitedAt,
+      signed: doc.signed,
+      signedAt: doc.signedAt,
+      signedBy: doc.signedBy
+    })
   }
 
   async countUnsigned(): Promise<number> {
