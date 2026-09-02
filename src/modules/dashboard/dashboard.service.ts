@@ -65,13 +65,20 @@ export class DashboardService {
 
   /** 待办聚合：仅「病历未完成」+「未编写处方」+「待 CA 签名」三类事项 */
   async todos(): Promise<TodoItem[]> {
-    // 接诊中的就诊
-    const pendingVisits = await this.visitModel
+    // 接诊中的就诊（同一患者多条时按最新一条去重）
+    const pendingVisitsRaw = await this.visitModel
       .find({ status: 'in_progress' })
       .sort({ visitedAt: -1 })
-      .limit(20)
+      .limit(50)
       .lean()
       .exec()
+    const seenPatient = new Set<string>()
+    const pendingVisits = pendingVisitsRaw.filter((v) => {
+      const key = String(v.patientId)
+      if (seenPatient.has(key)) return false
+      seenPatient.add(key)
+      return true
+    })
     const withRxIds = await this.recordModel.distinct('patientId', { type: 'prescription' })
     const withRxSet = new Set(withRxIds.map((id) => String(id)))
     const withEmrIds = await this.recordModel.distinct('patientId', { type: 'outpatient' })
