@@ -45,7 +45,11 @@ export class DrugManual {
   @Prop()
   fullText?: string
 
-  /** 数据来源：seed 种子 / crawl 爬虫 */
+  /** 药理分类（按药理细致分类） */
+  @Prop({ index: true })
+  category?: string
+
+  /** 数据来源：seed 种子 / crawl 爬虫 / registered 医生注册 */
   @Prop({ default: 'seed' })
   source?: string
 

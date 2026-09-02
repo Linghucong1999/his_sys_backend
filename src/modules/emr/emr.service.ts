@@ -4,6 +4,7 @@ import { FlattenMaps, Model, Types } from 'mongoose'
 import { MedicalRecord, MedicalRecordDocument, RxItem } from './schemas/medical-record.schema'
 import { IdCounterService } from '../id-counter/id-counter.service'
 import { Dictionary, DictionaryDocument } from '../dictionaries/schemas/dictionary.schema'
+import { DrugManualService } from '../drug-manual/drug-manual.service'
 
 export interface SaveRecordInput {
   patientId: string
@@ -27,7 +28,8 @@ export class EmrService {
   constructor(
     @InjectModel(MedicalRecord.name) private readonly recordModel: Model<MedicalRecordDocument>,
     @InjectModel(Dictionary.name) private readonly dictionaryModel: Model<DictionaryDocument>,
-    private readonly idCounter: IdCounterService
+    private readonly idCounter: IdCounterService,
+    private readonly drugManualService: DrugManualService
   ) {}
 
   /** 新诊断自学习：写入 ICD-10 字典（去重），后续输入时下拉框可检索到 */
@@ -139,6 +141,16 @@ export class EmrService {
       visitedAt: input.visitedAt ? new Date(input.visitedAt) : new Date()
     })
     await this.learnDiagnosis(input.diagnosis ?? [])
+    // 记录药库中不存在的药品（后续注册入库 + 词根分类）
+    await this.drugManualService.recordUnknownDrugs(
+      (input.prescriptionItems ?? []).map((item) => ({
+        drug: item.drug,
+        doctorId,
+        doctorName,
+        patientId: input.patientId,
+        patientName: input.patientName
+      }))
+    )
     return created
   }
 

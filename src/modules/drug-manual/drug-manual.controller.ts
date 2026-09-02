@@ -18,6 +18,14 @@ class UpsertManualDto {
 
   @IsOptional()
   @IsString()
+  category?: string
+
+  @IsOptional()
+  @IsString()
+  fullText?: string
+
+  @IsOptional()
+  @IsString()
   manufacturer?: string
 
   @IsOptional()
@@ -43,10 +51,6 @@ class UpsertManualDto {
   @IsOptional()
   @IsString()
   precautions?: string
-
-  @IsOptional()
-  @IsString()
-  fullText?: string
 }
 
 @ApiTags('drug-manuals')
@@ -55,9 +59,31 @@ class UpsertManualDto {
 export class DrugManualController {
   constructor(private readonly drugManualService: DrugManualService) {}
 
+  @Get('categories')
+  categories() {
+    return this.drugManualService.listCategories()
+  }
+
+  /** 未知药品列表（医生开过但药库中没有的） */
+  @Get('unknown')
+  unknownList() {
+    return this.drugManualService.listUnknown()
+  }
+
+  /** 注册新药入库（自动按药理词根分类） */
+  @Post('register')
+  register(@Body() dto: UpsertManualDto) {
+    return this.drugManualService.registerDrug({
+      drugName: dto.drugName,
+      spec: dto.spec,
+      category: dto.category,
+      fullText: dto.fullText
+    })
+  }
+
   @Get()
-  list(@Query('keyword') keyword?: string) {
-    return this.drugManualService.list(keyword)
+  list(@Query('keyword') keyword?: string, @Query('source') source?: string, @Query('category') category?: string) {
+    return this.drugManualService.list(keyword, source, category)
   }
 
   @Get(':id')
