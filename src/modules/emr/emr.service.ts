@@ -127,6 +127,20 @@ export class EmrService {
     const doc = await this.recordModel.findById(id).exec()
     if (!doc) throw new NotFoundException('病历不存在')
     if (doc.signed) return doc
+    // 服务端三要素校验（前端拦截之外的双保险）：门诊病历/处方/检查申请缺一不可
+    const missing: string[] = []
+    if (doc.type === 'outpatient') {
+      if (!doc.chiefComplaint?.trim()) missing.push('门诊病历（主诉未填写）')
+      if (!doc.prescriptionSummary?.trim()) missing.push('处方')
+      if (!doc.examRequest?.trim()) missing.push('检查申请')
+    } else if (doc.type === 'prescription') {
+      if (!doc.prescriptionSummary?.trim()) missing.push('处方')
+    } else if (doc.type === 'admission') {
+      if (!doc.chiefComplaint?.trim()) missing.push('门诊病历（主诉未填写）')
+    }
+    if (missing.length > 0) {
+      throw new NotFoundException(`以下内容未完成，不可 CA 签名：${missing.join('、')}`)
+    }
     doc.signed = true
     doc.signedAt = new Date()
     doc.signedBy = signer.username
