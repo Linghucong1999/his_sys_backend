@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose'
 import { FlattenMaps, Model, Types } from 'mongoose'
 import { MedicalRecord, MedicalRecordDocument } from './schemas/medical-record.schema'
 import { IdCounterService } from '../id-counter/id-counter.service'
+import { Dictionary, DictionaryDocument } from '../dictionaries/schemas/dictionary.schema'
 
 export interface SaveRecordInput {
   patientId: string
@@ -24,8 +25,22 @@ export interface SaveRecordInput {
 export class EmrService {
   constructor(
     @InjectModel(MedicalRecord.name) private readonly recordModel: Model<MedicalRecordDocument>,
+    @InjectModel(Dictionary.name) private readonly dictionaryModel: Model<DictionaryDocument>,
     private readonly idCounter: IdCounterService
   ) {}
+
+  /** 新诊断自学习：写入 ICD-10 字典（去重），后续输入时下拉框可检索到 */
+  private async learnDiagnosis(diagnosis: Array<{ code: string; name: string }>): Promise<void> {
+    for (const d of diagnosis ?? []) {
+      const name = d.name?.trim()
+      if (!name) continue
+      await this.dictionaryModel.updateOne(
+        { category: 'icd10', code: d.code ?? '', name },
+        { $setOnInsert: { category: 'icd10', code: d.code ?? '', name } },
+        { upsert: true }
+      )
+    }
+  }
 
   async list(
     query: {
@@ -109,9 +124,11 @@ export class EmrService {
       doc.set(input)
       doc.doctorName = doctorName
       if (doctorId) doc.doctorId = doctorId
-      return doc.save()
+      const saved = await doc.save()
+      await this.learnDiagnosis(input.diagnosis ?? [])
+      return saved
     }
-    return this.recordModel.create({
+    const created = await this.recordModel.create({
       ...input,
       recordNo: await this.idCounter.nextRecordNo(),
       doctorName,
@@ -120,6 +137,8 @@ export class EmrService {
       visitId: input.visitId ? new Types.ObjectId(input.visitId) : undefined,
       visitedAt: input.visitedAt ? new Date(input.visitedAt) : new Date()
     })
+    await this.learnDiagnosis(input.diagnosis ?? [])
+    return created
   }
 
   /** CA 电子签名（第一版为模拟签名，落审计由全局拦截器保证） */
