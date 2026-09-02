@@ -49,7 +49,9 @@ export class OutpatientController {
   }
 
   @Get('visits/patient/:patientId')
-  listByPatient(@Param('patientId') patientId: string) {
-    return this.outpatientService.listByPatient(patientId)
+  listByPatient(@Param('patientId') patientId: string, @CurrentUser() user: JwtUserPayload) {
+    // 医生仅可见自己的接诊记录；admin 可见全部
+    const doctorId = user.roles.includes('admin') ? undefined : user.userId
+    return this.outpatientService.listByPatient(patientId, doctorId)
   }
 }

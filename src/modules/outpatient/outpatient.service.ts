@@ -44,8 +44,11 @@ export class OutpatientService {
     return this.visitModel.find({ visitedAt: { $gte: start, $lt: end } }).sort({ visitedAt: -1 }).lean().exec()
   }
 
-  async listByPatient(patientId: string): Promise<FlattenMaps<VisitDocument>[]> {
-    return this.visitModel.find({ patientId }).sort({ visitedAt: -1 }).lean().exec()
+  async listByPatient(patientId: string, doctorId?: string): Promise<FlattenMaps<VisitDocument>[]> {
+    const filter: Record<string, unknown> = { patientId }
+    // 权限隔离：仅返回当前医生接诊的就诊记录
+    if (doctorId) filter.doctorId = doctorId
+    return this.visitModel.find(filter).sort({ visitedAt: -1 }).lean().exec()
   }
 
   async countToday(): Promise<{ total: number; followup: number; first: number }> {
