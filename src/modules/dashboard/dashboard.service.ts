@@ -46,7 +46,13 @@ export class DashboardService {
         this.visitModel.countDocuments({ visitedAt: { $gte: start, $lt: end } }),
         this.visitModel.countDocuments({ visitedAt: { $gte: start, $lt: end }, type: 'followup' }),
         this.visitModel.countDocuments({ visitedAt: { $gte: start, $lt: end }, type: 'first' }),
-        this.recordModel.countDocuments({ signed: false }),
+        this.recordModel.countDocuments({
+          signed: false,
+          type: 'outpatient',
+          chiefComplaint: { $ne: '' },
+          examRequest: { $ne: '' },
+          $or: [{ prescriptionSummary: { $ne: '' } }, { 'prescriptionItems.0': { $exists: true } }]
+        }),
         this.consultationModel.countDocuments({ status: 'pending' }),
         this.consultationModel.countDocuments({ status: 'accepted' }),
         this.consultationModel.countDocuments({ status: 'completed', respondedAt: { $gte: start, $lt: end } })
@@ -111,16 +117,43 @@ export class DashboardService {
         ref: v.visitNo
       })
     }
-    // 3. 待 CA 签名
+    // 3. 待 CA 签名（仅三要素齐全可签名）+ 病历待完善（缺项不可签名）
     for (const r of unsigned) {
-      items.push({
-        id: String(r._id),
-        icon: '🔏',
-        title: `${r.type === 'prescription' ? '处方' : '门诊病历'} ${r.recordNo} 待签名`,
-        sub: `${r.patientName} · ${r.department}`,
-        kind: 'sign',
-        ref: r.recordNo
-      })
+      if (r.type === 'prescription') {
+        const hasRx = !!(r.prescriptionSummary?.trim() || r.prescriptionItems?.length)
+        items.push({
+          id: String(r._id),
+          icon: hasRx ? '🔏' : '📋',
+          title: hasRx ? `处方 ${r.recordNo} 待签名` : `处方 ${r.recordNo} 待完善`,
+          sub: `${r.patientName} · ${r.department}`,
+          kind: hasRx ? 'sign' : 'emr',
+          ref: r.recordNo
+        })
+        continue
+      }
+      const missing: string[] = []
+      if (!r.chiefComplaint?.trim()) missing.push('主诉')
+      if (!(r.prescriptionSummary?.trim() || r.prescriptionItems?.length)) missing.push('处方')
+      if (!r.examRequest?.trim()) missing.push('检查申请')
+      if (missing.length === 0) {
+        items.push({
+          id: String(r._id),
+          icon: '🔏',
+          title: `门诊病历 ${r.recordNo} 待签名`,
+          sub: `${r.patientName} · ${r.department}`,
+          kind: 'sign',
+          ref: r.recordNo
+        })
+      } else {
+        items.push({
+          id: String(r._id),
+          icon: '📋',
+          title: `病历待完善 · ${r.patientName}`,
+          sub: `${r.department} · 缺${missing.join('、')}`,
+          kind: 'emr',
+          ref: r.recordNo
+        })
+      }
     }
     return items
   }
