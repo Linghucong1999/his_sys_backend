@@ -41,4 +41,10 @@ export class IdCounterService {
     const day = dateStr(d)
     return `MZ${day}${String(await this.next(`record:${day}`)).padStart(4, '0')}`
   }
+
+  /** 就诊号：MZ + yyyyMMdd + 4 位当日流水（与病历号独立计序） */
+  async nextVisitNo(d = new Date()): Promise<string> {
+    const day = dateStr(d)
+    return `MZ${day}${String(await this.next(`visit:${day}`)).padStart(4, '0')}`
+  }
 }

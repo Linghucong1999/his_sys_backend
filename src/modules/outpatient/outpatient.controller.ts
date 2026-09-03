@@ -38,8 +38,8 @@ export class OutpatientController {
     return this.outpatientService.createVisit({
       ...dto,
       doctorId: user.userId,
-      doctorName: user.username.startsWith('D') ? '王医生' : user.username,
-      department: '呼吸内科'
+      doctorName: user.realName ?? user.username,
+      department: user.department ?? '内科'
     })
   }
 

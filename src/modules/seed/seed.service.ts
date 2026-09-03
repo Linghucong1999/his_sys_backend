@@ -55,6 +55,8 @@ export class SeedService implements OnModuleInit {
     const day = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
     await this.idCounter.bump(`mrn:${day}`, 30)
     await this.idCounter.bump(`record:${day}`, 40)
+    await this.idCounter.bump(`visit:${day}`, 17)
+    await this.idCounter.bump(`prescription:${day}`, 20)
     await this.idCounter.bump('empi', 1)
     this.logger.log('演示数据种子完成（患者/就诊/病历/会诊/床位/医嘱/字典）')
   }

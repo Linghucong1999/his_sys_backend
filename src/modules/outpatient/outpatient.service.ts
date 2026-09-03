@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose'
 import { FlattenMaps, Model, Types } from 'mongoose'
 import { Visit, VisitDocument } from './schemas/visit.schema'
 import { MedicalRecord, MedicalRecordDocument } from '../emr/schemas/medical-record.schema'
+import { IdCounterService } from '../id-counter/id-counter.service'
 
 export interface CreateVisitInput {
   patientId: string
@@ -19,7 +20,8 @@ export interface CreateVisitInput {
 export class OutpatientService {
   constructor(
     @InjectModel(Visit.name) private readonly visitModel: Model<VisitDocument>,
-    @InjectModel(MedicalRecord.name) private readonly recordModel: Model<MedicalRecordDocument>
+    @InjectModel(MedicalRecord.name) private readonly recordModel: Model<MedicalRecordDocument>,
+    private readonly idCounter: IdCounterService
   ) {}
 
   private todayRange(): { start: Date; end: Date } {
@@ -52,9 +54,8 @@ export class OutpatientService {
       { $set: { status: 'completed' } }
     )
     const now = new Date()
-    const visitNo = `MZ${now.toISOString().slice(0, 10).replace(/-/g, '')}${String(
-      (await this.visitModel.countDocuments()) + 1
-    ).padStart(4, '0')}`
+    // 就诊号用原子自增（避免 countDocuments+1 与已有数据撞号导致 E11000）
+    const visitNo = await this.idCounter.nextVisitNo(now)
     return this.visitModel.create({
       ...input,
       visitNo,

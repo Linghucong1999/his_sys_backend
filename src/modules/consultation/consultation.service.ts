@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { FlattenMaps, Model, Types } from 'mongoose'
 import { Consultation, ConsultationDocument } from './schemas/consultation.schema'
+import { IdCounterService } from '../id-counter/id-counter.service'
 
 export interface CreateConsultationInput {
   patientId: string
@@ -15,7 +16,10 @@ export interface CreateConsultationInput {
 
 @Injectable()
 export class ConsultationService {
-  constructor(@InjectModel(Consultation.name) private readonly consultationModel: Model<ConsultationDocument>) {}
+  constructor(
+    @InjectModel(Consultation.name) private readonly consultationModel: Model<ConsultationDocument>,
+    private readonly idCounter: IdCounterService
+  ) {}
 
   async list(query: { status?: string }): Promise<FlattenMaps<ConsultationDocument>[]> {
     const filter: Record<string, unknown> = {}
@@ -26,7 +30,7 @@ export class ConsultationService {
   async create(input: CreateConsultationInput, doctorName: string): Promise<ConsultationDocument> {
     return this.consultationModel.create({
       ...input,
-      consultNo: `CS${Date.now()}`,
+      consultNo: `CS${String(await this.idCounter.next('consult')).padStart(9, '0')}`,
       patientId: new Types.ObjectId(input.patientId),
       fromDept: input.fromDept || '呼吸内科'
     })

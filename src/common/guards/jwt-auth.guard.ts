@@ -9,6 +9,8 @@ export interface JwtUserPayload {
   userId: string
   username: string
   roles: string[]
+  realName?: string
+  department?: string
 }
 
 @Injectable()

@@ -19,6 +19,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const m = (res as Record<string, unknown>).message
         message = Array.isArray(m) ? m.join('；') : String(m ?? exception.message)
       }
+    } else {
+      // 非 HTTP 异常（未预期错误）：打印完整堆栈，便于排查 500
+      console.error('[UnhandledError]', exception)
     }
 
     response.status(status).json({ code: status, data: null, message })
