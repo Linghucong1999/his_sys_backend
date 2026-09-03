@@ -31,9 +31,10 @@ src/
     ├── users/                  # 用户管理（种子账号见下）
     ├── patients/               # 患者主索引 EMPI（建档/搜索/合并）
     ├── outpatient/             # 门急诊就诊：医师直接接诊（无挂号）、今日就诊
-    ├── emr/                    # 电子病历：病历/处方列表、保存、CA 签名
+    ├── emr/                    # 电子病历：病历/处方列表、保存、CA 签名（签名联动生成处方笺）
     ├── consultation/           # 会诊管理：发起/响应/催办
-    ├── drug-manual/            # 药品说明书库（drugmanuals 集合，支持爬虫 upsert 导入）
+    ├── drug-manual/            # 药品说明书库（drugmanuals 集合：药理分类筛选、未知药品记录、注册入库自动词根分类）
+    ├── regions/                # 行政区划（regions 集合：省市区三级树，建档住址级联选择）
     ├── inpatient/              # 住院工作站：床位一览、长期/临时医嘱、停嘱
     ├── dictionaries/           # 基础字典：ICD-10/科室/药品目录
     ├── dashboard/              # 工作台聚合：统计摘要、待办聚合
@@ -55,10 +56,10 @@ src/
 ### 安装与运行
 
 ```bash
-npm install
-npm run start:dev    # 开发模式（热重载）
+yarn install
+yarn start:dev    # 开发模式（热重载）
 # 或
-npm run build && npm run start:prod
+yarn build && node dist/main.js
 ```
 
 启动成功后：

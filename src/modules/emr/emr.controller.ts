@@ -122,12 +122,12 @@ export class EmrController {
 
   @Post('records')
   save(@Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
-    return this.emrService.save(dto, user.username, user.userId)
+    return this.emrService.save(dto, user.username, user.userId, user.username)
   }
 
   @Put('records/:id')
   update(@Param('id') id: string, @Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
-    return this.emrService.save(dto, user.username, user.userId, id)
+    return this.emrService.save(dto, user.username, user.userId, user.username, id)
   }
 
   /** CA 签名 */

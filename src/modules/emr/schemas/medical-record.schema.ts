@@ -44,6 +44,10 @@ export class MedicalRecord {
   @Prop({ index: true })
   doctorId?: string
 
+  /** 医生工号（处方笺打印用） */
+  @Prop()
+  doctorUsername?: string
+
   @Prop({ index: true })
   visitId?: Types.ObjectId
 

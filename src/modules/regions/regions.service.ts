@@ -36,7 +36,8 @@ export class RegionsService implements OnModuleInit {
         if (n.children?.length) walk(n.children, n.code, level + 1)
       }
     }
-    walk((pcaRaw as PcaNode[]).default ?? (pcaRaw as PcaNode[]), null, 1)
+    const pca = Array.isArray(pcaRaw) ? pcaRaw : (pcaRaw as { default: PcaNode[] }).default
+    walk(pca, null, 1)
     await this.regionModel.insertMany(docs)
     this.treeCache = null
   }

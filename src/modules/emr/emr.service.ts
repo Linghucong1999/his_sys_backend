@@ -119,6 +119,7 @@ export class EmrService {
     input: SaveRecordInput,
     doctorName: string,
     doctorId?: string,
+    doctorUsername?: string,
     id?: string
   ): Promise<MedicalRecordDocument> {
     if (id) {
@@ -128,6 +129,7 @@ export class EmrService {
       doc.set(input)
       doc.doctorName = doctorName
       if (doctorId) doc.doctorId = doctorId
+      if (doctorUsername) doc.doctorUsername = doctorUsername
       const saved = await doc.save()
       await this.learnDiagnosis(input.diagnosis ?? [])
       return saved
@@ -137,6 +139,7 @@ export class EmrService {
       recordNo: await this.idCounter.nextRecordNo(),
       doctorName,
       doctorId,
+      doctorUsername,
       patientId: new Types.ObjectId(input.patientId),
       visitId: input.visitId ? new Types.ObjectId(input.visitId) : undefined,
       visitedAt: input.visitedAt ? new Date(input.visitedAt) : new Date()
@@ -198,6 +201,7 @@ export class EmrService {
       exists.diagnosis = doc.diagnosis
       exists.doctorId = doc.doctorId
       exists.doctorName = doc.doctorName
+      exists.doctorUsername = doc.doctorUsername
       exists.signed = doc.signed
       exists.signedAt = doc.signedAt
       exists.signedBy = doc.signedBy
@@ -212,6 +216,7 @@ export class EmrService {
       department: doc.department,
       doctorId: doc.doctorId,
       doctorName: doc.doctorName,
+      doctorUsername: doc.doctorUsername,
       visitId: doc.visitId,
       diagnosis: doc.diagnosis,
       prescriptionSummary: doc.prescriptionSummary,
