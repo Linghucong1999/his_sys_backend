@@ -183,6 +183,12 @@ export class EmrService {
     const saved = await doc.save()
     // 医生有处方的病历：签名时联动生成/更新处方笺（type: prescription）
     await this.syncPrescriptionDoc(saved)
+    // 签名即流程结束：完成对应就诊，避免消息残留"接诊中"待办
+    if (saved.visitId) {
+      await this.recordModel.db
+        .collection('visits')
+        .updateOne({ _id: saved.visitId }, { $set: { status: 'completed' } })
+    }
     return saved
   }
 
