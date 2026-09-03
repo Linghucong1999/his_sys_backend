@@ -31,10 +31,15 @@ export class OutpatientService {
 
   /** 医师直接接诊（无挂号）：建档/调档后创建就诊记录 */
   async createVisit(input: CreateVisitInput): Promise<VisitDocument> {
-    // 复诊门禁：患者存在未 CA 签名的文书时，视为接诊未完成，禁止再次接诊（待办聚合持续挂起）
+    // 复诊门禁：仅统计"进行中就诊"关联的未签名文书；历史遗留未签名文书不阻塞复诊
+    const activeVisits = await this.visitModel
+      .find({ patientId: new Types.ObjectId(input.patientId), status: 'in_progress' }, { _id: 1 })
+      .lean()
+      .exec()
     const unsignedCount = await this.recordModel.countDocuments({
       patientId: new Types.ObjectId(input.patientId),
-      signed: false
+      signed: false,
+      visitId: { $in: activeVisits.map((v) => v._id) }
     })
     if (unsignedCount > 0) {
       throw new ConflictException(

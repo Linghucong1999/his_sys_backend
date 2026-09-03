@@ -23,23 +23,31 @@ export class PatientsService {
    * 未签名门诊病历按字段缺失判断（主诉→未写病历、处方摘要→未写处方、检查申请→未写检查）；
    * 接诊中无门诊病历则三项全缺；全部已签名则无待办。
    */
+  /**
+   * 患者待办项：仅针对当前进行中（未签名）的门诊病历；
+   * "是否已有处方/检查"按该患者全部病历（含已签名历史）判断——已有即不再提示。
+   */
   private async pendingOf(patientId: Types.ObjectId): Promise<string[]> {
+    const anyRecord = await this.recordModel.countDocuments({ patientId })
+    if (anyRecord === 0) {
+      // 从未写过任何病历：初始待办三项全缺
+      return ['未写病历', '未写处方', '未写检查']
+    }
     const unsigned = await this.recordModel
-      .find({ patientId, signed: false, type: { $in: ['outpatient', 'prescription'] } })
+      .find({ patientId, signed: false, type: 'outpatient' })
       .lean()
       .exec()
     if (unsigned.length === 0) return []
+    const all = await this.recordModel
+      .find({ patientId }, { prescriptionSummary: 1, prescriptionItems: 1, examRequest: 1 })
+      .lean()
+      .exec()
+    const hasRxAny = all.some((r) => (r.prescriptionSummary ?? '').trim() || (r.prescriptionItems ?? []).length > 0)
+    const hasExamAny = all.some((r) => (r.examRequest ?? '').trim())
     const pending = new Set<string>()
-    const hasOutpatient = unsigned.some((r) => r.type === 'outpatient')
-    for (const r of unsigned) {
-      if (r.type === 'outpatient' && !r.chiefComplaint?.trim()) pending.add('未写病历')
-      if (!r.prescriptionSummary?.trim()) pending.add('未写处方')
-      if (r.type === 'outpatient' && !r.examRequest?.trim()) pending.add('未写检查')
-    }
-    if (!hasOutpatient) {
-      // 只有处方未签名但无门诊病历：视为病历未完成
-      pending.add('未写病历')
-    }
+    if (!unsigned.some((r) => r.chiefComplaint?.trim())) pending.add('未写病历')
+    if (!hasRxAny) pending.add('未写处方')
+    if (!hasExamAny) pending.add('未写检查')
     return [...pending]
   }
 

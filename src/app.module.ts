@@ -18,6 +18,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module'
 import { SearchModule } from './modules/search/search.module'
 import { SeedModule } from './modules/seed/seed.module'
 import { DrugManualModule } from './modules/drug-manual/drug-manual.module'
+import { RegionsModule } from './modules/regions/regions.module'
 
 @Module({
   imports: [
@@ -45,7 +46,8 @@ import { DrugManualModule } from './modules/drug-manual/drug-manual.module'
     DashboardModule,
     SearchModule,
     SeedModule,
-    DrugManualModule
+    DrugManualModule,
+    RegionsModule
   ],
   controllers: [AppController],
   providers: [AppService]
