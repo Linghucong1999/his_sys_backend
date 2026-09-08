@@ -63,6 +63,19 @@ export class MedicalRecord {
   @Prop()
   physicalExam?: string
 
+  /** 生命体征结构化值（单位固定，医生只填数字） */
+  @Prop({
+    type: { bpHigh: String, bpLow: String, breath: String, temp: String, pulse: String },
+    _id: false
+  })
+  vitals?: {
+    bpHigh?: string
+    bpLow?: string
+    breath?: string
+    temp?: string
+    pulse?: string
+  }
+
   @Prop({ type: [{ code: String, name: String }], default: [] })
   diagnosis: DiagnosisItem[]
 

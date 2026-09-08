@@ -1,9 +1,32 @@
 import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
-import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator'
+import { Type } from 'class-transformer'
+import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator'
 import { EmrService } from './emr.service'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import type { JwtUserPayload } from '../../common/guards/jwt-auth.guard'
+
+class VitalSignsDto {
+  @IsOptional()
+  @IsString()
+  bpHigh?: string
+
+  @IsOptional()
+  @IsString()
+  bpLow?: string
+
+  @IsOptional()
+  @IsString()
+  breath?: string
+
+  @IsOptional()
+  @IsString()
+  temp?: string
+
+  @IsOptional()
+  @IsString()
+  pulse?: string
+}
 
 class SaveRecordDto {
   @IsString()
@@ -40,6 +63,11 @@ class SaveRecordDto {
   @IsOptional()
   @IsString()
   physicalExam?: string
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VitalSignsDto)
+  vitals?: VitalSignsDto
 
   @IsOptional()
   @IsArray()

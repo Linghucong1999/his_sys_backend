@@ -17,6 +17,13 @@ export interface SaveRecordInput {
   presentIllness?: string
   pastHistory?: string
   physicalExam?: string
+  vitals?: {
+    bpHigh?: string
+    bpLow?: string
+    breath?: string
+    temp?: string
+    pulse?: string
+  }
   diagnosis?: Array<{ code: string; name: string }>
   prescriptionSummary?: string
   prescriptionItems?: RxItem[]
