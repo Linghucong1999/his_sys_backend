@@ -166,7 +166,7 @@ export class EmrService {
   }
 
   /** CA 电子签名（第一版为模拟签名，落审计由全局拦截器保证） */
-  async sign(id: string, signer: { userId: string; username: string }): Promise<MedicalRecordDocument> {
+  async sign(id: string, signer: { userId: string; name: string }): Promise<MedicalRecordDocument> {
     const doc = await this.recordModel.findById(id).exec()
     if (!doc) throw new NotFoundException('病历不存在')
     if (doc.signed) return doc
@@ -186,7 +186,7 @@ export class EmrService {
     }
     doc.signed = true
     doc.signedAt = new Date()
-    doc.signedBy = signer.username
+    doc.signedBy = signer.name
     const saved = await doc.save()
     // 医生有处方的病历：签名时联动生成/更新处方笺（type: prescription）
     await this.syncPrescriptionDoc(saved)

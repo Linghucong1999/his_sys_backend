@@ -150,17 +150,18 @@ export class EmrController {
 
   @Post('records')
   save(@Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
-    return this.emrService.save(dto, user.username, user.userId, user.username)
+    // 医师落库姓名（realName），工号单独存 doctorUsername，打印"医师"位置不得显示工号
+    return this.emrService.save(dto, user.realName ?? user.username, user.userId, user.username)
   }
 
   @Put('records/:id')
   update(@Param('id') id: string, @Body() dto: SaveRecordDto, @CurrentUser() user: JwtUserPayload) {
-    return this.emrService.save(dto, user.username, user.userId, user.username, id)
+    return this.emrService.save(dto, user.realName ?? user.username, user.userId, user.username, id)
   }
 
   /** CA 签名 */
   @Post('records/:id/sign')
   sign(@Param('id') id: string, @CurrentUser() user: JwtUserPayload) {
-    return this.emrService.sign(id, { userId: user.userId, username: user.username })
+    return this.emrService.sign(id, { userId: user.userId, name: user.realName ?? user.username })
   }
 }
