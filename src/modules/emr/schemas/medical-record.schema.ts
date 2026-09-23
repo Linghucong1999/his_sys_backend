@@ -19,6 +19,16 @@ export interface RxItem {
   duration?: string
 }
 
+/** 中药处方用法（煎服法 / 服法 / 剂数） */
+export interface HerbalUsage {
+  /** 煎服法：水煎服、开水冲服、打粉冲服、外用熏洗 */
+  decoction?: string
+  /** 服法：每日1剂，分2次温服 */
+  usage?: string
+  /** 剂数：7剂 */
+  doses?: string
+}
+
 /** 病历文书（门诊/入院/处方），支持 CA 签名状态 */
 @Schema({ versionKey: false, timestamps: true })
 export class MedicalRecord {
@@ -85,6 +95,14 @@ export class MedicalRecord {
   /** 结构化处方条目（新处方表单用；旧数据回退 prescriptionSummary） */
   @Prop({ type: [{ drug: String, spec: String, dose: String, frequency: String, route: String, duration: String }], default: [] })
   prescriptionItems: RxItem[]
+
+  /** 处方类型：western=西药/中成药；herbal=中药饮片 */
+  @Prop({ default: 'western', enum: ['western', 'herbal'] })
+  prescriptionType?: 'western' | 'herbal'
+
+  /** 中药处方用法（煎服法/服法/剂数；仅 herbal 处方使用） */
+  @Prop({ type: { decoction: String, usage: String, doses: String }, _id: false })
+  herbalUsage?: HerbalUsage
 
   /** 检查申请（CA 签名前置条件之一） */
   @Prop()

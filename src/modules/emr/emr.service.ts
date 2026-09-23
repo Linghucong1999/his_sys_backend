@@ -211,6 +211,8 @@ export class EmrService {
     if (exists) {
       exists.prescriptionSummary = doc.prescriptionSummary
       exists.prescriptionItems = doc.prescriptionItems
+      exists.prescriptionType = doc.prescriptionType
+      exists.herbalUsage = doc.herbalUsage
       exists.diagnosis = doc.diagnosis
       exists.doctorId = doc.doctorId
       exists.doctorName = doc.doctorName
@@ -234,6 +236,8 @@ export class EmrService {
       diagnosis: doc.diagnosis,
       prescriptionSummary: doc.prescriptionSummary,
       prescriptionItems: doc.prescriptionItems,
+      prescriptionType: doc.prescriptionType,
+      herbalUsage: doc.herbalUsage,
       visitedAt: doc.visitedAt,
       signed: doc.signed,
       signedAt: doc.signedAt,

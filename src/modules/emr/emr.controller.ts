@@ -28,6 +28,20 @@ class VitalSignsDto {
   pulse?: string
 }
 
+class HerbalUsageDto {
+  @IsOptional()
+  @IsString()
+  decoction?: string
+
+  @IsOptional()
+  @IsString()
+  usage?: string
+
+  @IsOptional()
+  @IsString()
+  doses?: string
+}
+
 class SaveRecordDto {
   @IsString()
   @IsNotEmpty()
@@ -87,6 +101,17 @@ class SaveRecordDto {
     route?: string
     duration?: string
   }>
+
+  /** 处方类型：western=西药/中成药；herbal=中药饮片 */
+  @IsOptional()
+  @IsIn(['western', 'herbal'])
+  prescriptionType?: 'western' | 'herbal'
+
+  /** 中药处方用法（煎服法/服法/剂数） */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => HerbalUsageDto)
+  herbalUsage?: HerbalUsageDto
 
   @IsOptional()
   @IsString()
